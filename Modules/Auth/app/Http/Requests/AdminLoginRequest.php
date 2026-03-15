@@ -2,18 +2,17 @@
 
 namespace Modules\Auth\Http\Requests;
 
-use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Http\Exceptions\HttpResponseException;
 
 /**
  * AdminLoginRequest — Validation cho endpoint đăng nhập Admin.
  *
  * Rules:
- *   - email: bắt buộc, đúng format email
- *   - password: bắt buộc, tối thiểu 6 ký tự
+ *   - email: bắt buộc, đúng format email, tối đa 255 ký tự
+ *   - password: bắt buộc, tối thiểu 6, tối đa 100 ký tự
  *
- * Khi validation fail → trả JSON 422 (không redirect HTML).
+ * Khi validation fail → Exception Handler tự trả JSON 422
+ * (đã config trong bootstrap/app.php).
  */
 class AdminLoginRequest extends FormRequest
 {
@@ -32,8 +31,8 @@ class AdminLoginRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'email'    => ['required', 'email'],
-            'password' => ['required', 'string', 'min:6'],
+            'email'    => ['required', 'email', 'max:255'],
+            'password' => ['required', 'string', 'min:6', 'max:100'],
         ];
     }
 
@@ -45,23 +44,11 @@ class AdminLoginRequest extends FormRequest
         return [
             'email.required'    => 'Email không được để trống.',
             'email.email'       => 'Email không đúng định dạng.',
+            'email.max'         => 'Email không được vượt quá :max ký tự.',
             'password.required' => 'Mật khẩu không được để trống.',
             'password.min'      => 'Mật khẩu phải có ít nhất :min ký tự.',
+            'password.max'      => 'Mật khẩu không được vượt quá :max ký tự.',
         ];
     }
-
-    /**
-     * Override failedValidation để trả JSON thay vì redirect.
-     * Đảm bảo tương thích với API-only (không dùng Blade).
-     */
-    protected function failedValidation(Validator $validator): void
-    {
-        throw new HttpResponseException(
-            response()->json([
-                'success' => false,
-                'message' => 'Dữ liệu không hợp lệ.',
-                'errors'  => $validator->errors(),
-            ], 422)
-        );
-    }
 }
+

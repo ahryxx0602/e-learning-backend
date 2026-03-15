@@ -31,6 +31,7 @@ return Application::configure(basePath: dirname(__DIR__))
                 return response()->json([
                     'success' => false,
                     'message' => "{$model} không tìm thấy.",
+                    'data'    => null,
                 ], 404);
             }
         });
@@ -41,6 +42,7 @@ return Application::configure(basePath: dirname(__DIR__))
                 return response()->json([
                     'success' => false,
                     'message' => 'Endpoint không tồn tại.',
+                    'data'    => null,
                 ], 404);
             }
         });
@@ -51,6 +53,7 @@ return Application::configure(basePath: dirname(__DIR__))
                 return response()->json([
                     'success' => false,
                     'message' => 'Chưa đăng nhập hoặc token không hợp lệ.',
+                    'data'    => null,
                 ], 401);
             }
         });
@@ -61,16 +64,18 @@ return Application::configure(basePath: dirname(__DIR__))
                 return response()->json([
                     'success' => false,
                     'message' => 'Bạn không có quyền thực hiện hành động này.',
+                    'data'    => null,
                 ], 403);
             }
         });
 
-        // ValidationException → 422 JSON (Laravel xử lý mặc định, nhưng ta chuẩn hoá format)
+        // ValidationException → 422 JSON (chuẩn hoá format giống ApiResponse)
         $exceptions->render(function (ValidationException $e, Request $request) {
             if ($request->is('api/*') || $request->expectsJson()) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Dữ liệu không hợp lệ.',
+                    'data'    => null,
                     'errors'  => $e->errors(),
                 ], 422);
             }

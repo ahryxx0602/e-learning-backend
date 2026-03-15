@@ -24,7 +24,9 @@ use Modules\Auth\Http\Controllers\Admin\AuthController;
 // ─── ADMIN AUTH (guard: admin) ───────────────────────────────
 Route::prefix('admin/auth')->group(function () {
     // Public — không cần đăng nhập
-    Route::post('login', [AuthController::class, 'login']);
+    // Rate limit: 5 lần/phút để chống brute-force
+    Route::post('login', [AuthController::class, 'login'])
+        ->middleware('throttle:5,1');
 
     // Protected — cần token admin
     Route::middleware('auth:admin')->group(function () {
