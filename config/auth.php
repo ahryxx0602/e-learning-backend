@@ -2,7 +2,7 @@
 
 use App\Models\User;
 use Modules\Students\Models\Student;
-use Modules\Users\Models\User as AdminUser;
+use Modules\Auth\Models\User as AdminUser;
 
 return [
 
