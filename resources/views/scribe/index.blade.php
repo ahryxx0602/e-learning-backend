@@ -2892,7 +2892,7 @@ You can check the Dev Tools console for debugging information.</code></pre>
     \"slug\": \"n\",
     \"description\": \"Animi quos velit et fugiat.\",
     \"icon\": \"d\",
-    \"status\": 0,
+    \"status\": 1,
     \"order\": 37,
     \"parent_id\": 16
 }"
@@ -2914,7 +2914,7 @@ let body = {
     "slug": "n",
     "description": "Animi quos velit et fugiat.",
     "icon": "d",
-    "status": 0,
+    "status": 1,
     "order": 37,
     "parent_id": 16
 };
@@ -3056,10 +3056,10 @@ You can check the Dev Tools console for debugging information.</code></pre>
  &nbsp;
                 <input type="number" style="display: none"
                step="any"               name="status"                data-endpoint="POSTapi-admin-categories"
-               value="0"
+               value="1"
                data-component="body">
     <br>
-<p>Example: <code>0</code></p>
+<p>Example: <code>1</code></p>
 Must be one of:
 <ul style="list-style-type: square;"><li><code>0</code></li> <li><code>1</code></li></ul>
         </div>
@@ -3253,7 +3253,7 @@ You can check the Dev Tools console for debugging information.</code></pre>
     \"slug\": \"n\",
     \"description\": \"Animi quos velit et fugiat.\",
     \"icon\": \"d\",
-    \"status\": 1,
+    \"status\": 0,
     \"order\": 37,
     \"parent_id\": 16
 }"
@@ -3275,7 +3275,7 @@ let body = {
     "slug": "n",
     "description": "Animi quos velit et fugiat.",
     "icon": "d",
-    "status": 1,
+    "status": 0,
     "order": 37,
     "parent_id": 16
 };
@@ -3434,10 +3434,10 @@ You can check the Dev Tools console for debugging information.</code></pre>
  &nbsp;
                 <input type="number" style="display: none"
                step="any"               name="status"                data-endpoint="PUTapi-admin-categories--id-"
-               value="1"
+               value="0"
                data-component="body">
     <br>
-<p>Example: <code>1</code></p>
+<p>Example: <code>0</code></p>
 Must be one of:
 <ul style="list-style-type: square;"><li><code>0</code></li> <li><code>1</code></li></ul>
         </div>

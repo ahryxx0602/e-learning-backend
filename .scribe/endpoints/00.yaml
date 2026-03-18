@@ -968,7 +968,7 @@ endpoints:
         name: status
         description: ''
         required: false
-        example: 0
+        example: 1
         type: integer
         enumValues:
           - 0
@@ -1003,7 +1003,7 @@ endpoints:
       slug: 'n'
       description: 'Animi quos velit et fugiat.'
       icon: d
-      status: 0
+      status: 1
       order: 37
       parent_id: 16
     fileParameters: []
@@ -1151,7 +1151,7 @@ endpoints:
         name: status
         description: ''
         required: false
-        example: 1
+        example: 0
         type: integer
         enumValues:
           - 0
@@ -1186,7 +1186,7 @@ endpoints:
       slug: 'n'
       description: 'Animi quos velit et fugiat.'
       icon: d
-      status: 1
+      status: 0
       order: 37
       parent_id: 16
     fileParameters: []
