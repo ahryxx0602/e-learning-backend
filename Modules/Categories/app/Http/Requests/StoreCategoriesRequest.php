@@ -29,7 +29,7 @@ class StoreCategoriesRequest extends FormRequest
             'icon'        => 'nullable|string|max:255',
             'status'      => 'nullable|integer|in:0,1',
             'order'       => 'nullable|integer|min:0',
-            'parent_id'   => 'nullable|integer|exists:categories,id',
+            'parent_id'   => 'nullable|integer|exists:categories,id,deleted_at,NULL',
         ];
     }
 

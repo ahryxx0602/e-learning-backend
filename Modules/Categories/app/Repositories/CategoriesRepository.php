@@ -82,8 +82,19 @@ class CategoriesRepository extends BaseRepository implements CategoriesRepositor
         if ($parentId === null) {
             // Đưa lên root
             $category->saveAsRoot();
-        } else {
+        }
+        else {
+            // Di chuyển vào chính nó
+            if ($parentId === $id) {
+                throw new \InvalidArgumentException('Không thể di chuyển danh mục vào chính nó.');
+            }
+
             $parent = $this->model->newQuery()->findOrFail($parentId);
+            // Di chuyển vào con của nó
+            if ($parent->isDescendantOf($category)) {
+                throw new \InvalidArgumentException('Không thể di chuyển danh mục vào con của nó.');
+            }
+
             $category->appendToNode($parent)->save();
         }
 
@@ -95,11 +106,15 @@ class CategoriesRepository extends BaseRepository implements CategoriesRepositor
     /**
      * {@inheritDoc}
      */
-    public function findBySlug(string $slug): ?Model
+    public function findBySlug(string $slug, bool $activeOnly = false): ?Model
     {
-        return $this->model->newQuery()
-            ->where('slug', $slug)
-            ->first();
+        $query = $this->model->newQuery()->where('slug', $slug);
+
+        if ($activeOnly) {
+            $query->active();
+        }
+
+        return $query->first();
     }
 
     /**

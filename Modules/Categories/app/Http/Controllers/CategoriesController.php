@@ -111,7 +111,11 @@ class CategoriesController extends Controller
      */
     public function move(MoveCategoryRequest $request, int $id): JsonResponse
     {
-        $category = $this->repository->moveToParent($id, $request->parent_id);
+        try {
+            $category = $this->repository->moveToParent($id, $request->parent_id);
+        } catch (\InvalidArgumentException $e) {
+            return $this->error($e->getMessage(), 422);
+        }
 
         return $this->success(new CategoryResource($category), 'Đã di chuyển danh mục thành công.');
     }
@@ -240,9 +244,9 @@ class CategoriesController extends Controller
      */
     public function publicShow(string $slug): JsonResponse
     {
-        $category = $this->repository->findBySlug($slug);
+        $category = $this->repository->findBySlug($slug, true);
 
-        if (!$category || $category->status !== 1) {
+        if (!$category) {
             return $this->error('Danh mục không tồn tại.', 404);
         }
 

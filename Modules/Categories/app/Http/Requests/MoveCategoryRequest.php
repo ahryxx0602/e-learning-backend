@@ -16,7 +16,7 @@ class MoveCategoryRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'parent_id' => 'nullable|integer|exists:categories,id',
+            'parent_id' => 'nullable|integer|exists:categories,id,deleted_at,NULL',
         ];
     }
 

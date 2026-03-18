@@ -45,8 +45,9 @@ interface CategoriesRepositoryInterface extends RepositoryInterface
 
     /**
      * Tìm category theo slug.
+     * Chỉ lấy active nếu $activeOnly = true.
      */
-    public function findBySlug(string $slug): ?\Illuminate\Database\Eloquent\Model;
+    public function findBySlug(string $slug, bool $activeOnly = false): ?\Illuminate\Database\Eloquent\Model;
 
     /**
      * Cập nhật trạng thái (status) cho một category.
