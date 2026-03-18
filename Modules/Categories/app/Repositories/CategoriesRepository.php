@@ -3,6 +3,8 @@
 namespace Modules\Categories\Repositories;
 
 use App\Repositories\BaseRepository;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Model;
 use Modules\Categories\Models\Category;
 
 /**
@@ -10,12 +12,105 @@ use Modules\Categories\Models\Category;
  *
  * Eloquent implementation cho CategoriesRepositoryInterface.
  * Extends BaseRepository (đã có sẵn 9 methods chuẩn + clamp perPage, soft-delete support).
- * Thêm các method riêng cho Categories tại đây.
+ * Thêm các method riêng cho Categories (nested set operations).
  */
 class CategoriesRepository extends BaseRepository implements CategoriesRepositoryInterface
 {
-    public function __construct(Categories $model)
+    public function __construct(Category $model)
     {
         parent::__construct($model);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function getTree(bool $activeOnly = false): Collection
+    {
+        $query = $this->model->newQuery()
+            ->defaultOrder();
+
+        if ($activeOnly) {
+            $query->active();
+        }
+
+        return $query->get()->toTree();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function getFlatTree(bool $activeOnly = false): Collection
+    {
+        $query = $this->model->newQuery()
+            ->defaultOrder()
+            ->withDepth();
+
+        if ($activeOnly) {
+            $query->active();
+        }
+
+        return $query->get();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function getAncestors(int $id): Collection
+    {
+        $category = $this->model->newQuery()->findOrFail($id);
+
+        return $category->ancestors()->defaultOrder()->get();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function getDescendants(int $id): Collection
+    {
+        $category = $this->model->newQuery()->findOrFail($id);
+
+        return $category->descendants()->defaultOrder()->withDepth()->get();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function moveToParent(int $id, ?int $parentId): Model
+    {
+        $category = $this->model->newQuery()->findOrFail($id);
+
+        if ($parentId === null) {
+            // Đưa lên root
+            $category->saveAsRoot();
+        } else {
+            $parent = $this->model->newQuery()->findOrFail($parentId);
+            $category->appendToNode($parent)->save();
+        }
+
+        $category->refresh();
+
+        return $category;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function findBySlug(string $slug): ?Model
+    {
+        return $this->model->newQuery()
+            ->where('slug', $slug)
+            ->first();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function toggleStatus(int $id): Model
+    {
+        $category = $this->model->newQuery()->findOrFail($id);
+        $category->update(['status' => $category->status === 1 ? 0 : 1]);
+        $category->refresh();
+
+        return $category;
     }
 }
