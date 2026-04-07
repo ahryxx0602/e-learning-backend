@@ -31,7 +31,7 @@ Route::middleware(['auth:admin'])->prefix('admin')->group(function () {
 | Public Routes (không cần auth)
 |--------------------------------------------------------------------------
 */
-Route::prefix('v1')->group(function () {
+Route::group([], function () {
     Route::get('courses',                  [CourseController::class, 'publicIndex']);
     Route::get('courses/{slug}',           [CourseController::class, 'publicShow']);
     Route::get('courses/{slug}/lessons',   [CourseController::class, 'publicLessons']);
@@ -42,6 +42,6 @@ Route::prefix('v1')->group(function () {
 | Client Routes (auth:api — học viên đã đăng nhập)
 |--------------------------------------------------------------------------
 */
-Route::middleware(['auth:api'])->prefix('v1')->group(function () {
+Route::middleware(['auth:api'])->group(function () {
     Route::get('my-courses', [CourseController::class, 'myCourses']);
 });

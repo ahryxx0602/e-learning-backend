@@ -31,7 +31,7 @@ Route::middleware(['auth:admin'])->prefix('admin')->group(function () {
 | Public Routes (không cần auth)
 |--------------------------------------------------------------------------
 */
-Route::prefix('v1')->group(function () {
+Route::group([], function () {
     Route::get('teachers',           [TeachersController::class, 'publicIndex']);
     Route::get('teachers/{slug}',    [TeachersController::class, 'publicShow']);
 });
