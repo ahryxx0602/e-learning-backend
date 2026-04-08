@@ -23,6 +23,7 @@ class UpdateLessonRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'section_id'  => 'sometimes|nullable|integer|exists:sections,id',
             'title'       => 'sometimes|required|string|max:255',
             'description' => 'sometimes|nullable|string',
             'type'        => 'sometimes|required|in:video,document,text',

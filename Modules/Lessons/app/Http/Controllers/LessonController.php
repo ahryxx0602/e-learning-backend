@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Modules\Course\Models\Course;
 use Modules\Lessons\Models\Lesson;
 use Modules\Lessons\Models\LessonProgress;
+use Modules\Lessons\Models\Section;
 use Modules\Lessons\Http\Requests\StoreLessonRequest;
 use Modules\Lessons\Http\Requests\UpdateLessonRequest;
 use Modules\Lessons\Repositories\LessonRepositoryInterface;
@@ -59,9 +60,23 @@ class LessonController extends Controller
         $validated = $request->validated();
         $validated['course_id'] = $course_id;
 
-        // Nếu không truyền order → tự đặt = số lessons hiện tại của course
+        // Validate section thuộc đúng course này (nếu có truyền section_id)
+        if (!empty($validated['section_id'])) {
+            $sectionExists = Section::where('id', $validated['section_id'])
+                ->where('course_id', $course_id)
+                ->exists();
+            if (!$sectionExists) {
+                return $this->error('Chương không thuộc khóa học này.', 422);
+            }
+        }
+
+        // Nếu không truyền order → tự đặt = số lessons hiện tại của section (hoặc course nếu không có section)
         if (!isset($validated['order'])) {
-            $validated['order'] = Lesson::where('course_id', $course_id)->count();
+            $orderQuery = Lesson::where('course_id', $course_id);
+            if (!empty($validated['section_id'])) {
+                $orderQuery->where('section_id', $validated['section_id']);
+            }
+            $validated['order'] = $orderQuery->count();
         }
 
         $lesson = $this->repository->create($validated);
@@ -208,36 +223,41 @@ class LessonController extends Controller
 
         $studentId = auth('api')->id();
 
-        $lessons = Lesson::where('course_id', $course->id)
-            ->where('status', 1)
-            ->orderBy('order', 'asc')
-            ->get();
-
         // Load tất cả progress 1 lần — tránh N+1
         $progressMap = LessonProgress::where('student_id', $studentId)
             ->where('course_id', $course->id)
             ->get()
             ->keyBy('lesson_id');
 
-        $result = $lessons->map(function ($lesson) use ($progressMap) {
-            $progress = $progressMap->get($lesson->id);
+        // Lấy sections published kèm lessons published, group theo chương
+        $sections = Section::where('course_id', $course->id)
+            ->where('status', 1)
+            ->ordered()
+            ->with([
+                'lessons' => fn($q) => $q->where('status', 1)->ordered(),
+            ])
+            ->get()
+            ->map(function ($section) use ($progressMap) {
+                return [
+                    'id'      => $section->id,
+                    'title'   => $section->title,
+                    'order'   => $section->order,
+                    'lessons' => $section->lessons->map(fn($lesson) => $this->formatLesson($lesson, $progressMap)),
+                ];
+            });
 
-            return [
-                'id'         => $lesson->id,
-                'title'      => $lesson->title,
-                'slug'       => $lesson->slug,
-                'type'       => $lesson->type,
-                'order'      => $lesson->order,
-                'is_preview' => $lesson->is_preview,
-                'duration'   => $lesson->duration,
-                'status'     => $lesson->status,
-                'progress'   => $progress ? [
-                    'is_completed'    => (bool) $progress->is_completed,
-                    'watched_seconds' => $progress->watched_seconds,
-                    'completed_at'    => $progress->completed_at,
-                ] : null,
-            ];
-        });
+        // Lessons không có section (section_id = null)
+        $orphanLessons = Lesson::where('course_id', $course->id)
+            ->whereNull('section_id')
+            ->where('status', 1)
+            ->ordered()
+            ->get()
+            ->map(fn($lesson) => $this->formatLesson($lesson, $progressMap));
+
+        $result = [
+            'sections'       => $sections,
+            'orphan_lessons' => $orphanLessons, // bài học chưa gán chương
+        ];
 
         return $this->success($result, 'Lấy danh sách bài giảng thành công.');
     }
@@ -300,6 +320,28 @@ class LessonController extends Controller
         ], 'Cập nhật tiến độ thành công.');
     }
 
+    // ── Helpers ──
+
+    private function formatLesson($lesson, $progressMap): array
+    {
+        $progress = $progressMap->get($lesson->id);
+
+        return [
+            'id'         => $lesson->id,
+            'title'      => $lesson->title,
+            'slug'       => $lesson->slug,
+            'type'       => $lesson->type,
+            'order'      => $lesson->order,
+            'is_preview' => $lesson->is_preview,
+            'duration'   => $lesson->duration,
+            'progress'   => $progress ? [
+                'is_completed'    => (bool) $progress->is_completed,
+                'watched_seconds' => $progress->watched_seconds,
+                'completed_at'    => $progress->completed_at,
+            ] : null,
+        ];
+    }
+
     /**
      * Client: Tổng quan tiến độ học của khóa học.
      */
@@ -330,28 +372,42 @@ class LessonController extends Controller
         $progressMap = LessonProgress::where('student_id', $studentId)
             ->where('course_id', $course->id)
             ->get()
-            ->keyBy('lesson_id')
-            ->toArray();
+            ->keyBy('lesson_id');
 
-        // Tính toán tiến độ
+        // Tính toán tiến độ tổng
         $totalLessons     = $lessons->count();
-        $completedLessons = collect($progressMap)->where('is_completed', 1)->count();
+        $completedLessons = $progressMap->where('is_completed', 1)->count();
         $percent          = $totalLessons > 0 ? round($completedLessons / $totalLessons * 100) : 0;
 
-        // Map lessons data
-        $lessonsData = $lessons->map(fn($lesson) => [
-            'id'              => $lesson->id,
-            'title'           => $lesson->title,
-            'is_completed'    => isset($progressMap[$lesson->id]) && (bool) $progressMap[$lesson->id]['is_completed'],
-            'watched_seconds' => $progressMap[$lesson->id]['watched_seconds'] ?? 0,
-        ]);
+        // Group lessons theo section
+        $sections = Section::where('course_id', $course->id)
+            ->where('status', 1)
+            ->ordered()
+            ->get()
+            ->map(function ($section) use ($lessons, $progressMap) {
+                $sectionLessons = $lessons->where('section_id', $section->id)->values();
+
+                return [
+                    'id'              => $section->id,
+                    'title'           => $section->title,
+                    'order'           => $section->order,
+                    'total'           => $sectionLessons->count(),
+                    'completed'       => $sectionLessons->filter(fn($l) => $progressMap->has($l->id) && $progressMap[$l->id]->is_completed)->count(),
+                    'lessons'         => $sectionLessons->map(fn($lesson) => [
+                        'id'              => $lesson->id,
+                        'title'           => $lesson->title,
+                        'is_completed'    => $progressMap->has($lesson->id) && (bool) $progressMap[$lesson->id]->is_completed,
+                        'watched_seconds' => $progressMap[$lesson->id]->watched_seconds ?? 0,
+                    ]),
+                ];
+            });
 
         return $this->success([
             'course_id'         => $course->id,
             'total_lessons'     => $totalLessons,
             'completed_lessons' => $completedLessons,
             'percent'           => $percent,
-            'lessons'           => $lessonsData,
+            'sections'          => $sections,
         ], 'Lấy tiến độ học thành công.');
     }
 }

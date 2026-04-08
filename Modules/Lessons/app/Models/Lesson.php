@@ -20,6 +20,7 @@ class Lesson extends Model
      */
     protected $fillable = [
         'course_id',
+        'section_id',
         'title',
         'slug',
         'description',
@@ -42,6 +43,7 @@ class Lesson extends Model
         'order'       => 'integer',
         'duration'    => 'integer',
         'course_id'   => 'integer',
+        'section_id'  => 'integer',
         'video_id'    => 'integer',
         'document_id' => 'integer',
         'created_at'  => 'datetime',
@@ -75,6 +77,11 @@ class Lesson extends Model
     public function course()
     {
         return $this->belongsTo(\Modules\Course\Models\Course::class, 'course_id');
+    }
+
+    public function section()
+    {
+        return $this->belongsTo(Section::class, 'section_id');
     }
 
     /**
