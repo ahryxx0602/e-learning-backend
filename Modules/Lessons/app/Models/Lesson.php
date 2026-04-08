@@ -91,4 +91,20 @@ class Lesson extends Model
     {
         return $this->hasMany(LessonProgress::class, 'lesson_id');
     }
+
+    /**
+     * Quan hệ tới file video của bài học.
+     */
+    public function video()
+    {
+        return $this->belongsTo(\Modules\Upload\Models\MediaFile::class, 'video_id');
+    }
+
+    /**
+     * Quan hệ tới file tài liệu của bài học.
+     */
+    public function document()
+    {
+        return $this->belongsTo(\Modules\Upload\Models\MediaFile::class, 'document_id');
+    }
 }

@@ -89,12 +89,9 @@ class LessonController extends Controller
         return $this->success($lesson, 'Tạo bài giảng thành công.', 201);
     }
 
-    /**
-     * Chi tiết bài giảng.
-     */
     public function show(int $id): JsonResponse
     {
-        $lesson = $this->repository->findOrFail($id);
+        $lesson = $this->repository->findOrFail($id, ['*'], ['video', 'document']);
 
         return $this->success($lesson, 'Lấy chi tiết bài giảng thành công.');
     }
