@@ -10,6 +10,7 @@ use Modules\Course\Models\Course;
 use Modules\Lessons\Models\Lesson;
 use Modules\Lessons\Models\LessonProgress;
 use Modules\Lessons\Models\Section;
+use Illuminate\Support\Str;
 use Modules\Lessons\Http\Requests\StoreLessonRequest;
 use Modules\Lessons\Http\Requests\UpdateLessonRequest;
 use Modules\Lessons\Repositories\LessonRepositoryInterface;
@@ -59,6 +60,7 @@ class LessonController extends Controller
 
         $validated = $request->validated();
         $validated['course_id'] = $course_id;
+        $validated['slug'] = Str::slug($validated['title']) . '-' . uniqid();
 
         // Validate section thuộc đúng course này (nếu có truyền section_id)
         if (!empty($validated['section_id'])) {

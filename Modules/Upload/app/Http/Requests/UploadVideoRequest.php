@@ -16,7 +16,7 @@ class UploadVideoRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'file' => 'required|file|mimetypes:video/mp4,video/webm,video/quicktime|max:512000',
+            'file' => 'required|file|mimetypes:video/mp4,video/webm,video/quicktime,video/x-matroska|max:512000',
         ];
     }
 
@@ -25,7 +25,7 @@ class UploadVideoRequest extends FormRequest
         return [
             'file.required'  => 'Vui lòng chọn file video.',
             'file.file'      => 'Dữ liệu phải là file.',
-            'file.mimetypes' => 'Chỉ chấp nhận định dạng: MP4, WebM, QuickTime.',
+            'file.mimetypes' => 'Chỉ chấp nhận định dạng: MP4, WebM, QuickTime, MKV.',
             'file.max'       => 'Dung lượng video tối đa 500MB.',
         ];
     }
