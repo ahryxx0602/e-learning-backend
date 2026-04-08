@@ -203,6 +203,81 @@ class LessonController extends Controller
         return $this->success(null, 'Sắp xếp bài giảng thành công.');
     }
 
+    // ── Bulk Actions ──
+
+    /**
+     * Cập nhật trạng thái hàng loạt (publish/unpublish).
+     */
+    public function bulkAction(Request $request): JsonResponse
+    {
+        $request->validate([
+            'ids'    => 'required|array|min:1',
+            'ids.*'  => 'integer|exists:lessons,id',
+            'action' => 'required|string|in:publish,unpublish,activate,deactivate',
+        ]);
+
+        $count = $this->repository->actionMany($request->ids, $request->action);
+
+        return $this->success(null, "Cập nhật trạng thái hàng loạt {$count} bài giảng thành công.");
+    }
+
+    /**
+     * Soft delete hàng loạt bài giảng.
+     */
+    public function bulkDelete(Request $request): JsonResponse
+    {
+        $request->validate([
+            'ids'   => 'required|array|min:1',
+            'ids.*' => 'integer|exists:lessons,id',
+        ]);
+
+        $lessons = Lesson::whereIn('id', $request->ids)->get();
+        $count = $this->repository->deleteMany($request->ids);
+
+        // Giảm counter total_lessons trên Course (cross-module)
+        foreach ($lessons->groupBy('course_id') as $courseId => $group) {
+            Course::where('id', $courseId)->decrement('total_lessons', $group->count());
+        }
+
+        return $this->success(null, "Xóa hàng loạt {$count} bài giảng thành công.");
+    }
+
+    /**
+     * Khôi phục hàng loạt bài giảng đã xóa.
+     */
+    public function bulkRestore(Request $request): JsonResponse
+    {
+        $request->validate([
+            'ids'   => 'required|array|min:1',
+            'ids.*' => 'integer',
+        ]);
+
+        $lessons = Lesson::withTrashed()->whereIn('id', $request->ids)->get();
+        $count = $this->repository->restoreMany($request->ids);
+
+        // Tăng lại counter total_lessons trên Course (cross-module)
+        foreach ($lessons->groupBy('course_id') as $courseId => $group) {
+            Course::where('id', $courseId)->increment('total_lessons', $group->count());
+        }
+
+        return $this->success(null, "Khôi phục hàng loạt {$count} bài giảng thành công.");
+    }
+
+    /**
+     * Xóa vĩnh viễn hàng loạt bài giảng.
+     */
+    public function bulkForceDelete(Request $request): JsonResponse
+    {
+        $request->validate([
+            'ids'   => 'required|array|min:1',
+            'ids.*' => 'integer',
+        ]);
+
+        $count = $this->repository->forceDeleteMany($request->ids);
+
+        return $this->success(null, "Xóa vĩnh viễn hàng loạt {$count} bài giảng thành công.");
+    }
+
     // ── Client API ──
 
     /**

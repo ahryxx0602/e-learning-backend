@@ -11,6 +11,11 @@ Route::middleware(['auth:admin'])->prefix('admin')->group(function () {
     Route::get('sections/trashed',                    [SectionController::class, 'trashed']);
     Route::post('sections/reorder',                   [SectionController::class, 'reorder']);
 
+    Route::post('sections/bulk-action',               [SectionController::class, 'bulkAction']);
+    Route::delete('sections/bulk-delete',             [SectionController::class, 'bulkDelete']);
+    Route::post('sections/bulk-restore',              [SectionController::class, 'bulkRestore']);
+    Route::delete('sections/bulk-force-delete',       [SectionController::class, 'bulkForceDelete']);
+
     Route::get('courses/{course_id}/sections',        [SectionController::class, 'index']);
     Route::post('courses/{course_id}/sections',       [SectionController::class, 'store']);
 
@@ -25,6 +30,11 @@ Route::middleware(['auth:admin'])->prefix('admin')->group(function () {
     // ── Lessons ──
     Route::get('lessons/trashed',                     [LessonController::class, 'trashed']);
     Route::post('lessons/reorder',                    [LessonController::class, 'reorder']);
+
+    Route::post('lessons/bulk-action',                [LessonController::class, 'bulkAction']);
+    Route::delete('lessons/bulk-delete',              [LessonController::class, 'bulkDelete']);
+    Route::post('lessons/bulk-restore',               [LessonController::class, 'bulkRestore']);
+    Route::delete('lessons/bulk-force-delete',        [LessonController::class, 'bulkForceDelete']);
 
     // Nested: lessons thuộc course (section_id optional trong body)
     Route::get('courses/{course_id}/lessons',         [LessonController::class, 'index']);

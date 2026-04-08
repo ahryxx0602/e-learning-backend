@@ -173,6 +173,69 @@ class SectionController extends Controller
         return $this->success(null, 'Sắp xếp chương thành công.');
     }
 
+    // ── Bulk Actions ──
+
+    /**
+     * Cập nhật trạng thái chương hàng loạt.
+     */
+    public function bulkAction(Request $request): JsonResponse
+    {
+        $request->validate([
+            'ids'    => 'required|array|min:1',
+            'ids.*'  => 'integer|exists:sections,id',
+            'action' => 'required|string|in:publish,unpublish,activate,deactivate',
+        ]);
+
+        $count = $this->repository->actionMany($request->ids, $request->action);
+
+        return $this->success(null, "Cập nhật trạng thái hàng loạt {$count} chương thành công.");
+    }
+
+    /**
+     * Xóa hàng loạt chương.
+     */
+    public function bulkDelete(Request $request): JsonResponse
+    {
+        $request->validate([
+            'ids'   => 'required|array|min:1',
+            'ids.*' => 'integer|exists:sections,id',
+        ]);
+
+        $count = $this->repository->deleteMany($request->ids);
+
+        return $this->success(null, "Xóa hàng loạt {$count} chương thành công.");
+    }
+
+    /**
+     * Khôi phục hàng loạt chương đã xóa.
+     */
+    public function bulkRestore(Request $request): JsonResponse
+    {
+        $request->validate([
+            'ids'   => 'required|array|min:1',
+            'ids.*' => 'integer',
+        ]);
+
+        $count = $this->repository->restoreMany($request->ids);
+
+        return $this->success(null, "Khôi phục hàng loạt {$count} chương thành công.");
+    }
+
+    /**
+     * Xóa vĩnh viễn hàng loạt chương.
+     */
+    public function bulkForceDelete(Request $request): JsonResponse
+    {
+        $request->validate([
+            'ids'   => 'required|array|min:1',
+            'ids.*' => 'integer',
+        ]);
+
+        $count = $this->repository->forceDeleteMany($request->ids);
+
+        return $this->success(null, "Xóa vĩnh viễn hàng loạt {$count} chương thành công.");
+    }
+
     // ── Public ──
 
     /**
