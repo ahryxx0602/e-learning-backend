@@ -1,0 +1,47 @@
+<?php
+
+use Illuminate\Support\Facades\Route;
+use Modules\Course\Http\Controllers\CourseController;
+
+/*
+|--------------------------------------------------------------------------
+| Admin Routes (auth:admin middleware)
+|--------------------------------------------------------------------------
+*/
+Route::middleware(['auth:admin'])->prefix('admin')->group(function () {
+    // Extra routes (đặt TRƯỚC apiResource để tránh bị match bởi {course})
+    Route::get('courses/trashed',               [CourseController::class, 'trashed']);
+
+    // Bulk routes
+    Route::post('courses/bulk-restore',         [CourseController::class, 'bulkRestore']);
+    Route::delete('courses/bulk-delete',        [CourseController::class, 'bulkDelete']);
+    Route::delete('courses/bulk-force-delete',  [CourseController::class, 'bulkForceDelete']);
+
+    // Standard CRUD
+    Route::apiResource('courses', CourseController::class)->names('admin.courses');
+
+    // Per-item actions (đặt SAU apiResource)
+    Route::patch('courses/{id}/toggle-status',  [CourseController::class, 'toggleStatus']);
+    Route::post('courses/{id}/restore',         [CourseController::class, 'restore']);
+    Route::delete('courses/{id}/force-delete',  [CourseController::class, 'forceDelete']);
+});
+
+/*
+|--------------------------------------------------------------------------
+| Public Routes (không cần auth)
+|--------------------------------------------------------------------------
+*/
+Route::group([], function () {
+    Route::get('courses',                  [CourseController::class, 'publicIndex']);
+    Route::get('courses/{slug}',           [CourseController::class, 'publicShow']);
+    Route::get('courses/{slug}/lessons',   [CourseController::class, 'publicLessons']);
+});
+
+/*
+|--------------------------------------------------------------------------
+| Client Routes (auth:api — học viên đã đăng nhập)
+|--------------------------------------------------------------------------
+*/
+Route::middleware(['auth:api'])->group(function () {
+    Route::get('my-courses', [CourseController::class, 'myCourses']);
+});

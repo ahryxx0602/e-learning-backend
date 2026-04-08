@@ -1,0 +1,357 @@
+<?php
+
+namespace Modules\Lessons\Http\Controllers;
+
+use App\Http\Controllers\Controller;
+use App\Traits\ApiResponse;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Modules\Course\Models\Course;
+use Modules\Lessons\Models\Lesson;
+use Modules\Lessons\Models\LessonProgress;
+use Modules\Lessons\Http\Requests\StoreLessonRequest;
+use Modules\Lessons\Http\Requests\UpdateLessonRequest;
+use Modules\Lessons\Repositories\LessonRepositoryInterface;
+
+class LessonController extends Controller
+{
+    use ApiResponse;
+
+    protected LessonRepositoryInterface $repository;
+
+    public function __construct(LessonRepositoryInterface $repository)
+    {
+        $this->repository = $repository;
+    }
+
+    // ── Admin CRUD ──
+
+    /**
+     * Danh sách bài giảng của một khóa học (có phân trang + filter).
+     */
+    public function index(Request $request, int $course_id): JsonResponse
+    {
+        $request->validate([
+            'status'   => 'nullable|in:0,1',
+            'type'     => 'nullable|in:video,document,text',
+            'per_page' => 'nullable|integer|min:1|max:100',
+        ]);
+
+        // Kiểm tra course tồn tại — trả 404 rõ ràng thay vì empty list
+        Course::findOrFail($course_id);
+
+        $perPage = (int) $request->query('per_page', 15);
+        $filters = $request->only(['status', 'type']);
+
+        $data = $this->repository->getByCourse($course_id, $filters, $perPage);
+
+        return $this->paginated($data, 'Lấy danh sách bài giảng thành công.');
+    }
+
+    /**
+     * Tạo mới bài giảng cho khóa học.
+     */
+    public function store(StoreLessonRequest $request, int $course_id): JsonResponse
+    {
+        // Kiểm tra course tồn tại — tự throw 404 nếu không có
+        Course::findOrFail($course_id);
+
+        $validated = $request->validated();
+        $validated['course_id'] = $course_id;
+
+        // Nếu không truyền order → tự đặt = số lessons hiện tại của course
+        if (!isset($validated['order'])) {
+            $validated['order'] = Lesson::where('course_id', $course_id)->count();
+        }
+
+        $lesson = $this->repository->create($validated);
+
+        // Cập nhật counter total_lessons trên Course (cross-module)
+        Course::where('id', $course_id)->increment('total_lessons');
+
+        return $this->success($lesson, 'Tạo bài giảng thành công.', 201);
+    }
+
+    /**
+     * Chi tiết bài giảng.
+     */
+    public function show(int $id): JsonResponse
+    {
+        $lesson = $this->repository->findOrFail($id);
+
+        return $this->success($lesson, 'Lấy chi tiết bài giảng thành công.');
+    }
+
+    /**
+     * Cập nhật bài giảng.
+     */
+    public function update(UpdateLessonRequest $request, int $id): JsonResponse
+    {
+        $lesson = $this->repository->update($id, $request->validated());
+
+        return $this->success($lesson, 'Cập nhật bài giảng thành công.');
+    }
+
+    /**
+     * Xóa bài giảng (soft delete).
+     */
+    public function destroy(int $id): JsonResponse
+    {
+        $lesson = $this->repository->findOrFail($id);
+        $this->repository->delete($id);
+
+        // Giảm counter total_lessons trên Course (cross-module)
+        Course::where('id', $lesson->course_id)->decrement('total_lessons');
+
+        return $this->success(null, 'Xóa bài giảng thành công.');
+    }
+
+    /**
+     * Toggle trạng thái draft/published (0 ↔ 1).
+     */
+    public function toggleStatus(int $id): JsonResponse
+    {
+        $lesson = $this->repository->toggleStatus($id);
+
+        return $this->success(
+            ['id' => $lesson->id, 'status' => $lesson->status],
+            'Cập nhật trạng thái thành công.'
+        );
+    }
+
+    // ── Soft Delete Operations ──
+
+    /**
+     * Danh sách bài giảng đã bị soft-delete (thùng rác).
+     */
+    public function trashed(Request $request): JsonResponse
+    {
+        $request->validate([
+            'per_page' => 'nullable|integer|min:1|max:100',
+        ]);
+
+        $perPage = (int) $request->query('per_page', 15);
+        $data = $this->repository->paginateTrashed($perPage);
+
+        return $this->paginated($data, 'Lấy danh sách bài giảng đã xóa thành công.');
+    }
+
+    /**
+     * Khôi phục bài giảng đã soft-delete.
+     */
+    public function restore(int $id): JsonResponse
+    {
+        // Dùng withTrashed để tìm lesson đã bị xóa mềm
+        $lesson = Lesson::withTrashed()->findOrFail($id);
+        $this->repository->restore($id);
+
+        // Tăng lại counter total_lessons trên Course (cross-module)
+        Course::where('id', $lesson->course_id)->increment('total_lessons');
+
+        return $this->success(null, 'Khôi phục bài giảng thành công.');
+    }
+
+    /**
+     * Xóa vĩnh viễn bài giảng.
+     */
+    public function forceDelete(int $id): JsonResponse
+    {
+        $this->repository->forceDeleteById($id);
+
+        return $this->success(null, 'Xóa vĩnh viễn bài giảng thành công.');
+    }
+
+    // ── Reorder ──
+
+    /**
+     * Cập nhật thứ tự bài giảng hàng loạt.
+     */
+    public function reorder(Request $request): JsonResponse
+    {
+        $request->validate([
+            'orders'          => 'required|array',
+            'orders.*.id'     => 'required|integer|exists:lessons,id',
+            'orders.*.order'  => 'required|integer|min:0',
+        ]);
+
+        // Đảm bảo tất cả lesson trong array thuộc cùng 1 course
+        $ids = collect($request->orders)->pluck('id')->toArray();
+        $courseIds = Lesson::whereIn('id', $ids)->distinct()->pluck('course_id');
+        if ($courseIds->count() > 1) {
+            return $this->error('Không thể sắp xếp bài giảng của nhiều khóa học cùng lúc.', 422);
+        }
+
+        $this->repository->reorder($request->orders);
+
+        return $this->success(null, 'Sắp xếp bài giảng thành công.');
+    }
+
+    // ── Client API ──
+
+    /**
+     * Client: Danh sách bài giảng của khóa đã mua (kèm progress).
+     */
+    public function myLessons(Request $request, string $slug): JsonResponse
+    {
+        $course = Course::where('slug', $slug)->where('status', 1)->first();
+
+        if (!$course) {
+            return $this->error('Khóa học không tồn tại.', 404);
+        }
+
+        // Kiểm tra student đã enroll
+        $enrolled = $course->students()->where('student_id', auth('api')->id())->exists();
+
+        if (!$enrolled) {
+            return $this->error('Bạn chưa mua khóa học này.', 403);
+        }
+
+        $studentId = auth('api')->id();
+
+        $lessons = Lesson::where('course_id', $course->id)
+            ->where('status', 1)
+            ->orderBy('order', 'asc')
+            ->get();
+
+        // Load tất cả progress 1 lần — tránh N+1
+        $progressMap = LessonProgress::where('student_id', $studentId)
+            ->where('course_id', $course->id)
+            ->get()
+            ->keyBy('lesson_id');
+
+        $result = $lessons->map(function ($lesson) use ($progressMap) {
+            $progress = $progressMap->get($lesson->id);
+
+            return [
+                'id'         => $lesson->id,
+                'title'      => $lesson->title,
+                'slug'       => $lesson->slug,
+                'type'       => $lesson->type,
+                'order'      => $lesson->order,
+                'is_preview' => $lesson->is_preview,
+                'duration'   => $lesson->duration,
+                'status'     => $lesson->status,
+                'progress'   => $progress ? [
+                    'is_completed'    => (bool) $progress->is_completed,
+                    'watched_seconds' => $progress->watched_seconds,
+                    'completed_at'    => $progress->completed_at,
+                ] : null,
+            ];
+        });
+
+        return $this->success($result, 'Lấy danh sách bài giảng thành công.');
+    }
+
+    /**
+     * Client: Cập nhật tiến độ học bài giảng.
+     */
+    public function updateProgress(Request $request, int $id): JsonResponse
+    {
+        $request->validate([
+            'watched_seconds' => 'required|integer|min:0',
+            'is_completed'    => 'nullable|boolean',
+        ]);
+
+        $lesson = Lesson::find($id);
+
+        if (!$lesson) {
+            return $this->error('Bài giảng không tồn tại.', 404);
+        }
+
+        // Kiểm tra student đã enroll course chứa lesson
+        $enrolled = Course::where('id', $lesson->course_id)
+            ->whereHas('students', fn($q) => $q->where('student_id', auth('api')->id()))
+            ->exists();
+
+        if (!$enrolled) {
+            return $this->error('Bạn chưa mua khóa học này.', 403);
+        }
+
+        $studentId = auth('api')->id();
+
+        // Lấy progress hiện tại (nếu có) để xử lý completed_at
+        $existingProgress = LessonProgress::where('student_id', $studentId)
+            ->where('lesson_id', $id)
+            ->first();
+
+        $isCompleted = $request->boolean('is_completed', false);
+
+        // completed_at chỉ set lần đầu khi is_completed=true, không ghi đè nếu đã có
+        $completedAt = $isCompleted && !$existingProgress?->completed_at
+            ? now()
+            : ($existingProgress?->completed_at ?? null);
+
+        $progress = LessonProgress::updateOrCreate(
+            ['student_id' => $studentId, 'lesson_id' => $id],
+            [
+                'course_id'       => $lesson->course_id,
+                'watched_seconds' => $request->watched_seconds,
+                'is_completed'    => $isCompleted,
+                'completed_at'    => $completedAt,
+            ]
+        );
+
+        return $this->success([
+            'lesson_id'       => $id,
+            'course_id'       => $lesson->course_id,
+            'is_completed'    => (bool) $progress->is_completed,
+            'watched_seconds' => $progress->watched_seconds,
+            'completed_at'    => $progress->completed_at,
+        ], 'Cập nhật tiến độ thành công.');
+    }
+
+    /**
+     * Client: Tổng quan tiến độ học của khóa học.
+     */
+    public function courseProgress(Request $request, string $slug): JsonResponse
+    {
+        $course = Course::where('slug', $slug)->where('status', 1)->first();
+
+        if (!$course) {
+            return $this->error('Khóa học không tồn tại.', 404);
+        }
+
+        // Kiểm tra student đã enroll
+        $enrolled = $course->students()->where('student_id', auth('api')->id())->exists();
+
+        if (!$enrolled) {
+            return $this->error('Bạn chưa mua khóa học này.', 403);
+        }
+
+        $studentId = auth('api')->id();
+
+        // Lấy tất cả lessons status=1 của course
+        $lessons = Lesson::where('course_id', $course->id)
+            ->where('status', 1)
+            ->orderBy('order')
+            ->get();
+
+        // Lấy tất cả progress của student cho course này, keyed by lesson_id
+        $progressMap = LessonProgress::where('student_id', $studentId)
+            ->where('course_id', $course->id)
+            ->get()
+            ->keyBy('lesson_id')
+            ->toArray();
+
+        // Tính toán tiến độ
+        $totalLessons     = $lessons->count();
+        $completedLessons = collect($progressMap)->where('is_completed', 1)->count();
+        $percent          = $totalLessons > 0 ? round($completedLessons / $totalLessons * 100) : 0;
+
+        // Map lessons data
+        $lessonsData = $lessons->map(fn($lesson) => [
+            'id'              => $lesson->id,
+            'title'           => $lesson->title,
+            'is_completed'    => isset($progressMap[$lesson->id]) && (bool) $progressMap[$lesson->id]['is_completed'],
+            'watched_seconds' => $progressMap[$lesson->id]['watched_seconds'] ?? 0,
+        ]);
+
+        return $this->success([
+            'course_id'         => $course->id,
+            'total_lessons'     => $totalLessons,
+            'completed_lessons' => $completedLessons,
+            'percent'           => $percent,
+            'lessons'           => $lessonsData,
+        ], 'Lấy tiến độ học thành công.');
+    }
+}

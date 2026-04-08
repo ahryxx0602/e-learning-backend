@@ -1,0 +1,11 @@
+{
+    "User": true,
+    "Auth": true,
+    "Users": true,
+    "Students": true,
+    "Categories": true,
+    "Teachers": true,
+    "Course": true,
+    "Upload": true,
+    "Lessons": true
+}
