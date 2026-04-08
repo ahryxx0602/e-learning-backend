@@ -206,16 +206,49 @@ class LessonController extends Controller
     // ── Bulk Actions ──
 
     /**
-     * Cập nhật trạng thái hàng loạt (publish/unpublish).
+     * Hành động hàng loạt: cập nhật trạng thái hoặc phân chương (assign-section).
      */
     public function bulkAction(Request $request): JsonResponse
     {
         $request->validate([
-            'ids'    => 'required|array|min:1',
-            'ids.*'  => 'integer|exists:lessons,id',
-            'action' => 'required|string|in:publish,unpublish,activate,deactivate',
+            'ids'        => 'required|array|min:1',
+            'ids.*'      => 'integer|exists:lessons,id',
+            'action'     => 'required|string|in:publish,unpublish,activate,deactivate,assign-section',
+            'section_id' => 'nullable|integer|exists:sections,id',
         ]);
 
+        // ── Phân chương hàng loạt ──
+        if ($request->action === 'assign-section') {
+            $sectionId = $request->section_id; // null = bỏ phân chương
+
+            // Validate: tất cả lessons phải thuộc cùng 1 course
+            $courseIds = Lesson::whereIn('id', $request->ids)->distinct()->pluck('course_id');
+            if ($courseIds->count() > 1) {
+                return $this->error('Các bài giảng phải thuộc cùng một khóa học.', 422);
+            }
+
+            // Validate: section phải thuộc đúng course đó (nếu section_id != null)
+            if ($sectionId) {
+                $courseId = $courseIds->first();
+                $sectionBelongsToCourse = Section::where('id', $sectionId)
+                    ->where('course_id', $courseId)
+                    ->exists();
+                if (!$sectionBelongsToCourse) {
+                    return $this->error('Chương không thuộc khóa học này.', 422);
+                }
+            }
+
+            $count = Lesson::whereIn('id', $request->ids)
+                ->update(['section_id' => $sectionId]);
+
+            $message = $sectionId
+                ? "Đã gán {$count} bài giảng vào chương thành công."
+                : "Đã bỏ phân chương {$count} bài giảng thành công.";
+
+            return $this->success(null, $message);
+        }
+
+        // ── Các action trạng thái (activate/deactivate/publish/unpublish) ──
         $count = $this->repository->actionMany($request->ids, $request->action);
 
         return $this->success(null, "Cập nhật trạng thái hàng loạt {$count} bài giảng thành công.");
