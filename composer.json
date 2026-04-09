@@ -62,7 +62,10 @@
             "Modules\\Upload\\Database\\Seeders\\": "Modules/Upload/database/seeders/",
             "Modules\\Lessons\\": "Modules/Lessons/app/",
             "Modules\\Lessons\\Database\\Factories\\": "Modules/Lessons/database/factories/",
-            "Modules\\Lessons\\Database\\Seeders\\": "Modules/Lessons/database/seeders/"
+            "Modules\\Lessons\\Database\\Seeders\\": "Modules/Lessons/database/seeders/",
+            "Modules\\Payment\\": "Modules/Payment/app/",
+            "Modules\\Payment\\Database\\Factories\\": "Modules/Payment/database/factories/",
+            "Modules\\Payment\\Database\\Seeders\\": "Modules/Payment/database/seeders/"
         }
     },
     "autoload-dev": {

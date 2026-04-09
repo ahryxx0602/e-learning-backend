@@ -1,0 +1,11 @@
+{
+    "name": "Payment",
+    "alias": "payment",
+    "description": "Payment module — VNPAY integration, orders & transactions",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\Payment\\Providers\\PaymentServiceProvider"
+    ],
+    "files": []
+}
