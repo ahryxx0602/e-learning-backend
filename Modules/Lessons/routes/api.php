@@ -49,8 +49,8 @@ Route::middleware(['auth:admin'])->prefix('admin')->group(function () {
     Route::delete('lessons/{id}/force-delete',        [LessonController::class, 'forceDelete']);
 });
 
-// ── Client routes (auth:api — học viên đã đăng nhập) ──────
-Route::middleware(['auth:api'])->group(function () {
+// ── Client routes (auth:api + email.verified — học viên đã đăng nhập và đã kích hoạt) ──
+Route::middleware(['auth:api', 'email.verified'])->group(function () {
     Route::get('my-courses/{slug}/lessons',           [LessonController::class, 'myLessons']);
     Route::get('my-courses/{slug}/lessons/{lesson_slug}', [LessonController::class, 'myLessonDetail']);
     Route::post('lessons/{id}/progress',              [LessonController::class, 'updateProgress']);

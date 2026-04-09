@@ -40,10 +40,10 @@ Route::group([], function () {
 
 /*
 |--------------------------------------------------------------------------
-| Client Routes (auth:api — học viên đã đăng nhập)
+| Client Routes (auth:api + email.verified — học viên đã đăng nhập và đã kích hoạt)
 |--------------------------------------------------------------------------
 */
-Route::middleware(['auth:api'])->group(function () {
+Route::middleware(['auth:api', 'email.verified'])->group(function () {
     Route::get('my-courses', [CourseController::class, 'myCourses']);
     Route::post('courses/{slug}/enroll-free', [CourseController::class, 'enrollFree']);
 });

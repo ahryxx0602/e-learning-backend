@@ -109,6 +109,15 @@ class AuthController extends Controller
             return $this->error('Email hoặc mật khẩu không đúng.', 401);
         }
 
+        // Kiểm tra tài khoản đã xác thực email chưa
+        if (!$student->email_verified_at) {
+            return $this->error(
+                'Tài khoản chưa được kích hoạt. Vui lòng kiểm tra email để xác thực tài khoản.',
+                403,
+                ['email_not_verified' => true, 'email' => $student->email]
+            );
+        }
+
         $token = $student->createToken('student-token')->plainTextToken;
 
         return $this->success([

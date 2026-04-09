@@ -22,6 +22,11 @@ return Application::configure(basePath: dirname(__DIR__))
         // API-only project: không redirect về trang login
         // Để AuthenticationException được throw → exception handler trả về 401 JSON
         $middleware->redirectGuestsTo(fn () => null);
+
+        // Alias middleware kiểm tra tài khoản đã xác thực email
+        $middleware->alias([
+            'email.verified' => \Modules\Auth\Http\Middleware\EnsureEmailVerified::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // --- API JSON Exception Handler ---
