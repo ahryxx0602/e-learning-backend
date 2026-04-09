@@ -47,7 +47,7 @@
 | Công nghệ | Mô tả |
 |-----------|-------|
 | **VNPAY / MoMo API** | Cổng thanh toán trực tuyến |
-| **AWS S3 / Cloudinary** | Cloud Storage lưu trữ video bài giảng |
+| **Laravel Storage (Local)** | Lưu trữ file/video bài giảng trên server cục bộ (`storage/app/public`) |
 | **OpenAI GPT-4o-mini** | Tính năng AI Auto-Quiz tự động tạo câu hỏi |
 | **Spatie PDF-to-Text** | Trích xuất văn bản từ tài liệu PDF |
 

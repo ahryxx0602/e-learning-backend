@@ -35,6 +35,7 @@ Route::group([], function () {
     Route::get('courses',                  [CourseController::class, 'publicIndex']);
     Route::get('courses/{slug}',           [CourseController::class, 'publicShow']);
     Route::get('courses/{slug}/lessons',   [CourseController::class, 'publicLessons']);
+    Route::get('courses/{slug}/preview-lesson/{lesson_slug}', [CourseController::class, 'publicPreviewLesson']);
 });
 
 /*
@@ -44,4 +45,5 @@ Route::group([], function () {
 */
 Route::middleware(['auth:api'])->group(function () {
     Route::get('my-courses', [CourseController::class, 'myCourses']);
+    Route::post('courses/{slug}/enroll-free', [CourseController::class, 'enrollFree']);
 });

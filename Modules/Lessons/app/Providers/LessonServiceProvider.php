@@ -28,6 +28,11 @@ class LessonServiceProvider extends ServiceProvider
             \Modules\Lessons\Repositories\LessonRepository::class
         );
 
+        $this->app->bind(
+            \Modules\Lessons\Repositories\SectionRepositoryInterface::class,
+            \Modules\Lessons\Repositories\SectionRepository::class
+        );
+
         $this->app->register(RouteServiceProvider::class);
     }
 }

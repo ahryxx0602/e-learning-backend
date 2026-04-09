@@ -144,10 +144,19 @@ class CourseController extends Controller
     {
         $request->validate([
             'per_page' => 'nullable|integer|min:1|max:100',
+            'search'   => 'nullable|string|max:255',
         ]);
 
         $perPage = (int) $request->query('per_page', 15);
-        $data = $this->repository->paginateTrashed($perPage);
+        $search  = $request->query('search');
+
+        $query = Course::onlyTrashed()->latest('deleted_at');
+
+        if ($search) {
+            $query->where('name', 'like', "%{$search}%");
+        }
+
+        $data = $query->paginate($perPage);
         $data->setCollection(CourseResource::collection($data->getCollection())->collection);
 
         return $this->paginated($data);
@@ -298,27 +307,54 @@ class CourseController extends Controller
             $isPurchased = $course->students()->where('student_id', auth('api')->id())->exists();
         }
 
-        // Load lessons theo trạng thái mua
-        $lessonsQuery = $course->lessons()->where('status', 1);
-
-        if (!$isPurchased) {
-            $lessonsQuery->where('is_preview', true);
-        }
-
-        $lessons = $lessonsQuery->orderBy('order', 'asc')->get()->map(fn ($lesson) => [
-            'id'         => $lesson->id,
-            'title'      => $lesson->title,
-            'slug'       => $lesson->slug,
-            'type'       => $lesson->type,
-            'order'      => $lesson->order,
-            'is_preview' => $lesson->is_preview,
-            'duration'   => $lesson->duration,
+        // Load sections theo trạng thái mua
+        $sections = $course->sections()->where('status', 1)->with(['lessons' => function($q) {
+            $q->where('status', 1);
+        }])->get()->map(fn ($section) => [
+            'id'      => $section->id,
+            'title'   => $section->title,
+            'order'   => $section->order,
+            'lessons' => $section->lessons->map(fn ($lesson) => [
+                'id'         => $lesson->id,
+                'title'      => $lesson->title,
+                'slug'       => $lesson->slug,
+                'type'       => $lesson->type,
+                'order'      => $lesson->order,
+                'is_preview' => $lesson->is_preview,
+                'duration'   => $lesson->duration,
+            ])->values(),
         ])->values();
 
         return $this->success([
             'is_purchased' => $isPurchased,
-            'lessons'      => $lessons,
+            'sections'     => $sections,
         ], 'Lấy danh sách bài giảng thành công.');
+    }
+
+    /**
+     * Client: Đăng ký khóa học miễn phí.
+     */
+    public function enrollFree(string $slug): JsonResponse
+    {
+        $course = $this->repository->findBySlug($slug, true);
+        if (!$course) {
+            return $this->error('Khóa học không tồn tại.', 404);
+        }
+
+        if ($course->price > 0) {
+            return $this->error('Khóa học này không miễn phí.', 400);
+        }
+
+        $student = auth('api')->user();
+
+        if (!$course->students()->where('student_id', $student->id)->exists()) {
+            $course->students()->attach($student->id, ['enrolled_at' => now()]);
+            
+            // Cập nhật số lượng học viên (+1)
+            $this->repository->incrementStudentCount($course->id);
+        }
+
+        return $this->success(null, 'Đăng ký thành công! Bạn đã có thể vào học.');
     }
 
     /**
@@ -335,9 +371,63 @@ class CourseController extends Controller
 
         $courses = $this->repository->getByStudent($studentId, $perPage);
 
-        $courses->setCollection(CourseResource::collection($courses->getCollection())->collection);
+        // Tính progress_percent cho mỗi khóa học
+        $courseData = $courses->getCollection()->map(function ($course) use ($studentId) {
+            $resource = new CourseResource($course);
+            $data = $resource->resolve();
 
-        return $this->paginated($courses);
+            // Đếm tổng lessons và lessons đã hoàn thành
+            $totalLessons = \Modules\Lessons\Models\Lesson::where('course_id', $course->id)
+                ->published()->count();
+            $completedLessons = \Modules\Lessons\Models\LessonProgress::where('student_id', $studentId)
+                ->whereIn('lesson_id', \Modules\Lessons\Models\Lesson::where('course_id', $course->id)
+                    ->published()->pluck('id'))
+                ->where('is_completed', true)
+                ->count();
+
+            $data['progress_percent'] = $totalLessons > 0
+                ? round(($completedLessons / $totalLessons) * 100)
+                : 0;
+
+            return $data;
+        });
+
+        return $this->paginated($courses->setCollection($courseData));
+    }
+
+    /**
+     * Public: Xem chi tiết bài học nếu là bài học thử (is_preview = 1).
+     */
+    public function publicPreviewLesson(string $courseSlug, string $lessonSlug): JsonResponse
+    {
+        $course = $this->repository->findBySlug($courseSlug, true);
+        if (!$course) {
+            return $this->error('Khóa học không tồn tại.', 404);
+        }
+
+        $lesson = \Modules\Lessons\Models\Lesson::where('course_id', $course->id)
+            ->where('slug', $lessonSlug)
+            ->where('status', 1)
+            ->with(['video', 'document'])
+            ->first();
+
+        if (!$lesson) {
+            return $this->error('Bài học không tồn tại.', 404);
+        }
+
+        if (!$lesson->is_preview) {
+            return $this->error('Đây không phải bài học thử.', 403);
+        }
+
+        return $this->success([
+            'id'           => $lesson->id,
+            'title'        => $lesson->title,
+            'type'         => $lesson->type,
+            'video_url'    => $lesson->video ? $lesson->video->url : null,
+            'document_url' => $lesson->document ? $lesson->document->url : null,
+            'content'      => $lesson->content,
+            'is_preview'   => $lesson->is_preview,
+        ], 'Lấy bài học thử thành công.');
     }
 
     // ── Private Helpers ──

@@ -5,6 +5,7 @@ namespace Modules\Course\Repositories;
 use App\Repositories\BaseRepository;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Modules\Categories\Models\Category;
 use Modules\Course\Models\Course;
 
 /**
@@ -46,11 +47,15 @@ class CourseRepository extends BaseRepository implements CourseRepositoryInterfa
             $query->where('teacher_id', (int) $filters['teacher_id']);
         }
 
-        // Filter theo category_id (qua pivot)
+        // Filter theo category_id (qua pivot, bao gồm cả con cháu)
         if (!empty($filters['category_id'])) {
-            $query->whereHas('categories', function ($q) use ($filters) {
-                $q->where('categories.id', (int) $filters['category_id']);
-            });
+            $category = Category::find((int) $filters['category_id']);
+            if ($category) {
+                $categoryIds = $category->descendants()->pluck('id')->push($category->id)->toArray();
+                $query->whereHas('categories', function ($q) use ($categoryIds) {
+                    $q->whereIn('categories.id', $categoryIds);
+                });
+            }
         }
 
         // Filter theo level
@@ -78,11 +83,15 @@ class CourseRepository extends BaseRepository implements CourseRepositoryInterfa
             $query->where('name', 'like', '%' . $filters['search'] . '%');
         }
 
-        // Filter theo category_id (qua pivot)
+        // Filter theo category_id (qua pivot, bao gồm cả con cháu)
         if (!empty($filters['category_id'])) {
-            $query->whereHas('categories', function ($q) use ($filters) {
-                $q->where('categories.id', (int) $filters['category_id']);
-            });
+            $category = Category::find((int) $filters['category_id']);
+            if ($category) {
+                $categoryIds = $category->descendants()->pluck('id')->push($category->id)->toArray();
+                $query->whereHas('categories', function ($q) use ($categoryIds) {
+                    $q->whereIn('categories.id', $categoryIds);
+                });
+            }
         }
 
         // Filter theo level
@@ -100,7 +109,7 @@ class CourseRepository extends BaseRepository implements CourseRepositoryInterfa
     {
         $query = $this->model->newQuery()
             ->where('slug', $slug)
-            ->with(['teacher', 'categories']);
+            ->with(['teacher', 'categories.ancestors']);
 
         if ($publishedOnly) {
             $query->published();
@@ -169,7 +178,7 @@ class CourseRepository extends BaseRepository implements CourseRepositoryInterfa
         $perPage = max(1, min($perPage, static::MAX_PER_PAGE));
 
         return $this->model->newQuery()
-            ->whereHas('students', fn($q) => $q->where('student_id', $studentId))
+            ->whereHas('students', fn($q) => $q->where('students.id', $studentId))
             ->with(['teacher', 'categories'])
             ->latest()
             ->paginate($perPage);

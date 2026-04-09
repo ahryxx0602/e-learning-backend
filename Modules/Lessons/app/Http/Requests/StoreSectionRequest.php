@@ -1,12 +1,12 @@
 <?php
 
-namespace Modules\Upload\Http\Requests;
+namespace Modules\Lessons\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Http\Exceptions\HttpResponseException;
 
-class UploadVideoRequest extends FormRequest
+class StoreSectionRequest extends FormRequest
 {
     public function authorize(): bool
     {
@@ -16,17 +16,21 @@ class UploadVideoRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'file' => 'required|file|mimetypes:video/mp4,video/webm,video/quicktime,video/x-matroska|max:512000',
+            'title'       => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'order'       => 'nullable|integer|min:0',
+            'status'      => 'nullable|integer|in:0,1',
         ];
     }
 
     public function messages(): array
     {
         return [
-            'file.required'  => 'Vui lòng chọn file video.',
-            'file.file'      => 'Dữ liệu phải là file.',
-            'file.mimetypes' => 'Chỉ chấp nhận định dạng: MP4, WebM, QuickTime, MKV.',
-            'file.max'       => 'Dung lượng video tối đa 500MB.',
+            'title.required' => 'Tiêu đề chương là bắt buộc.',
+            'title.max'      => 'Tiêu đề chương tối đa 255 ký tự.',
+            'order.integer'  => 'Thứ tự phải là số nguyên.',
+            'order.min'      => 'Thứ tự không được nhỏ hơn 0.',
+            'status.in'      => 'Trạng thái chỉ có thể là 0 hoặc 1.',
         ];
     }
 

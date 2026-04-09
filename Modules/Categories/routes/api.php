@@ -37,6 +37,7 @@ Route::middleware(['auth:admin'])->prefix('admin')->group(function () {
 |--------------------------------------------------------------------------
 */
 Route::group([], function () {
+    Route::get('categories',            [CategoriesController::class, 'publicIndex']);
     Route::get('categories/tree',       [CategoriesController::class, 'publicTree']);
     Route::get('categories/{slug}',     [CategoriesController::class, 'publicShow']);
 });

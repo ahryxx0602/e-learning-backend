@@ -106,11 +106,18 @@ class Course extends Model
     }
 
     /**
-     * Course có nhiều Lessons.
-     * Relationship sẽ hoạt động khi Module Lessons được tạo.
+     * Course có nhiều Sections chứa Lessons
+     */
+    public function sections()
+    {
+        return $this->hasMany(\Modules\Lessons\Models\Section::class, 'course_id')->ordered();
+    }
+
+    /**
+     * Course có nhiều Lessons (phẳng) qua section. Tạm thời có thể giữ lại nếu logic cũ cần.
      */
     public function lessons()
     {
-        return $this->hasMany(\Modules\Lessons\Models\Lesson::class, 'course_id');
+        return $this->hasManyThrough(\Modules\Lessons\Models\Lesson::class, \Modules\Lessons\Models\Section::class, 'course_id', 'section_id');
     }
 }

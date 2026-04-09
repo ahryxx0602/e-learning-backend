@@ -23,3 +23,6 @@ Route::middleware(['auth:admin'])->prefix('admin')->group(function () {
     // Delete (dùng chung cho cả 2 flow)
     Route::delete('upload/{id}',         [UploadController::class, 'destroy']);
 });
+
+// Stream nội dung media — auth được xử lý trong controller (hỗ trợ token qua query param)
+Route::get('media/{id}/stream', [UploadController::class, 'stream']);
