@@ -14,6 +14,7 @@ use Modules\Course\Http\Requests\BulkDeleteCourseRequest;
 use Modules\Course\Http\Requests\BulkRestoreCourseRequest;
 use Modules\Course\Http\Requests\BulkForceDeleteCourseRequest;
 use Modules\Course\Http\Resources\CourseResource;
+use Modules\Course\Models\Course;
 use Modules\Course\Repositories\CourseRepositoryInterface;
 
 class CourseController extends Controller
