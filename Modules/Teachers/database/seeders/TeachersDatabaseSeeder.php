@@ -19,7 +19,7 @@ class TeachersDatabaseSeeder extends Seeder
                 'description' => 'Giảng viên lập trình Web với hơn 10 năm kinh nghiệm trong phát triển phần mềm. Chuyên gia về PHP, Laravel, và các công nghệ web hiện đại.',
                 'exp' => 10,
                 'date_of_birth' => '1985-03-15',
-                'image' => 'https://i.pravatar.cc/300?u=nguyen-van-an',
+                'image' => 'seed/images/teacher-1.png',
                 'status' => 1,
             ],
             [
@@ -28,7 +28,7 @@ class TeachersDatabaseSeeder extends Seeder
                 'description' => 'Chuyên gia thiết kế UI/UX với 8 năm kinh nghiệm. Đã tham gia thiết kế giao diện cho nhiều dự án lớn tại Việt Nam và quốc tế.',
                 'exp' => 8,
                 'date_of_birth' => '1990-07-22',
-                'image' => 'https://i.pravatar.cc/300?u=tran-thi-binh',
+                'image' => 'seed/images/teacher-2.png',
                 'status' => 1,
             ],
             [
@@ -37,7 +37,7 @@ class TeachersDatabaseSeeder extends Seeder
                 'description' => 'Giảng viên Digital Marketing với 6 năm kinh nghiệm. Chuyên về SEO, Google Ads, và Facebook Marketing.',
                 'exp' => 6,
                 'date_of_birth' => '1992-11-05',
-                'image' => 'https://i.pravatar.cc/300?u=le-minh-cuong',
+                'image' => 'seed/images/teacher-3.png',
                 'status' => 1,
             ],
             [
@@ -46,7 +46,7 @@ class TeachersDatabaseSeeder extends Seeder
                 'description' => 'Lập trình viên Mobile với 7 năm kinh nghiệm. Chuyên về Flutter, React Native và phát triển ứng dụng đa nền tảng.',
                 'exp' => 7,
                 'date_of_birth' => '1988-01-30',
-                'image' => 'https://i.pravatar.cc/300?u=pham-hong-duc',
+                'image' => 'seed/images/teacher-4.png',
                 'status' => 1,
             ],
             [
@@ -55,7 +55,7 @@ class TeachersDatabaseSeeder extends Seeder
                 'description' => 'Giảng viên tiếng Anh với chứng chỉ IELTS 8.5, 5 năm kinh nghiệm giảng dạy trực tuyến.',
                 'exp' => 5,
                 'date_of_birth' => '1995-06-18',
-                'image' => 'https://i.pravatar.cc/300?u=hoang-thi-em',
+                'image' => 'seed/images/teacher-1.png',
                 'status' => 1,
             ],
             [
@@ -64,7 +64,7 @@ class TeachersDatabaseSeeder extends Seeder
                 'description' => 'Chuyên gia DevOps và Cloud Computing với 9 năm kinh nghiệm. AWS Certified Solutions Architect, Docker, Kubernetes.',
                 'exp' => 9,
                 'date_of_birth' => '1986-09-12',
-                'image' => 'https://i.pravatar.cc/300?u=vu-dinh-phu',
+                'image' => 'seed/images/teacher-2.png',
                 'status' => 1,
             ],
             [
@@ -73,7 +73,7 @@ class TeachersDatabaseSeeder extends Seeder
                 'description' => 'Giảng viên Data Science & Machine Learning. Tiến sĩ AI từ Đại học Bách Khoa, 4 năm kinh nghiệm giảng dạy.',
                 'exp' => 4,
                 'date_of_birth' => '1993-12-25',
-                'image' => 'https://i.pravatar.cc/300?u=dang-thi-giang',
+                'image' => 'seed/images/teacher-3.png',
                 'status' => 1,
             ],
             [
@@ -82,7 +82,7 @@ class TeachersDatabaseSeeder extends Seeder
                 'description' => 'Chuyên gia bảo mật mạng (Cybersecurity) với 12 năm kinh nghiệm. CEH, OSCP certified.',
                 'exp' => 12,
                 'date_of_birth' => '1983-04-08',
-                'image' => 'https://i.pravatar.cc/300?u=bui-quang-huy',
+                'image' => 'seed/images/teacher-4.png',
                 'status' => 1,
             ],
             [
@@ -91,7 +91,7 @@ class TeachersDatabaseSeeder extends Seeder
                 'description' => 'Giảng viên Graphic Design với 6 năm kinh nghiệm. Thành thạo Adobe Creative Suite, Figma, Sketch.',
                 'exp' => 6,
                 'date_of_birth' => '1991-08-14',
-                'image' => 'https://i.pravatar.cc/300?u=ngo-thanh-vy',
+                'image' => 'seed/images/teacher-1.png',
                 'status' => 0,
             ],
             [
@@ -100,7 +100,7 @@ class TeachersDatabaseSeeder extends Seeder
                 'description' => 'Giảng viên Blockchain & Web3 với 3 năm kinh nghiệm. Solidity developer, DeFi specialist.',
                 'exp' => 3,
                 'date_of_birth' => '1996-02-28',
-                'image' => 'https://i.pravatar.cc/300?u=trinh-van-khoa',
+                'image' => 'seed/images/teacher-2.png',
                 'status' => 0,
             ],
         ];

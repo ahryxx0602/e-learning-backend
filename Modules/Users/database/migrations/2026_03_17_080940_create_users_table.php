@@ -11,17 +11,15 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('users', function (Blueprint $table) {
-            $table->id();
-            $table->string('name');
-            $table->string('email')->unique();
-            $table->string('avatar')->nullable();
-            $table->string('password');
-            $table->rememberToken();
-            $table->timestamp('email_verified_at')->nullable();
-            // TODO: Thêm các cột cần thiết
-            $table->timestamps();
-            $table->softDeletes();
+        // Table 'users' đã được tạo bởi core migration.
+        // Chỉ thêm các cột mở rộng còn thiếu.
+        Schema::table('users', function (Blueprint $table) {
+            if (!Schema::hasColumn('users', 'avatar')) {
+                $table->string('avatar')->nullable()->after('email');
+            }
+            if (!Schema::hasColumn('users', 'deleted_at')) {
+                $table->softDeletes();
+            }
         });
     }
 
@@ -30,6 +28,9 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('users');
+        Schema::table('users', function (Blueprint $table) {
+            $table->dropColumn(['avatar']);
+            $table->dropSoftDeletes();
+        });
     }
 };

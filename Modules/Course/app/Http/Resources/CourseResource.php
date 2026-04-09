@@ -16,7 +16,11 @@ class CourseResource extends JsonResource
             'name'           => $this->name,
             'slug'           => $this->slug,
             'description'    => $this->description,
-            'thumbnail'      => $this->thumbnail,
+            'thumbnail'      => $this->thumbnail
+                                    ? (str_starts_with($this->thumbnail, 'http') || str_starts_with($this->thumbnail, '/storage')
+                                        ? $this->thumbnail
+                                        : '/storage/' . $this->thumbnail)
+                                    : null,
             'price'          => $this->price,
             'sale_price'     => $this->sale_price,
             'level'          => $this->level,

@@ -15,7 +15,11 @@ class TeacherResource extends JsonResource
             'slug'        => $this->slug,
             'description' => $this->description,
             'exp'         => $this->exp,
-            'image'       => $this->image,
+            'image'       => $this->image
+                                ? (str_starts_with($this->image, 'http') || str_starts_with($this->image, '/storage')
+                                    ? $this->image
+                                    : '/storage/' . $this->image)
+                                : null,
             'status'      => $this->status,
             'courses'     => $this->whenLoaded('courses', function () {
                 return $this->courses->map(fn ($course) => [
