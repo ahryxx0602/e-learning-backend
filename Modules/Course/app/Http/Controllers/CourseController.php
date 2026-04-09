@@ -144,19 +144,10 @@ class CourseController extends Controller
     {
         $request->validate([
             'per_page' => 'nullable|integer|min:1|max:100',
-            'search'   => 'nullable|string|max:255',
         ]);
 
         $perPage = (int) $request->query('per_page', 15);
-        $search  = $request->query('search');
-
-        $query = Course::onlyTrashed()->latest('deleted_at');
-
-        if ($search) {
-            $query->where('name', 'like', "%{$search}%");
-        }
-
-        $data = $query->paginate($perPage);
+        $data = $this->repository->paginateTrashed($perPage);
         $data->setCollection(CourseResource::collection($data->getCollection())->collection);
 
         return $this->paginated($data);
@@ -371,28 +362,9 @@ class CourseController extends Controller
 
         $courses = $this->repository->getByStudent($studentId, $perPage);
 
-        // Tính progress_percent cho mỗi khóa học
-        $courseData = $courses->getCollection()->map(function ($course) use ($studentId) {
-            $resource = new CourseResource($course);
-            $data = $resource->resolve();
+        $courses->setCollection(CourseResource::collection($courses->getCollection())->collection);
 
-            // Đếm tổng lessons và lessons đã hoàn thành
-            $totalLessons = \Modules\Lessons\Models\Lesson::where('course_id', $course->id)
-                ->published()->count();
-            $completedLessons = \Modules\Lessons\Models\LessonProgress::where('student_id', $studentId)
-                ->whereIn('lesson_id', \Modules\Lessons\Models\Lesson::where('course_id', $course->id)
-                    ->published()->pluck('id'))
-                ->where('is_completed', true)
-                ->count();
-
-            $data['progress_percent'] = $totalLessons > 0
-                ? round(($completedLessons / $totalLessons) * 100)
-                : 0;
-
-            return $data;
-        });
-
-        return $this->paginated($courses->setCollection($courseData));
+        return $this->paginated($courses);
     }
 
     /**

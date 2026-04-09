@@ -543,7 +543,7 @@ class LessonController extends Controller
                         'id'              => $lesson->id,
                         'title'           => $lesson->title,
                         'is_completed'    => $progressMap->has($lesson->id) && (bool) $progressMap[$lesson->id]->is_completed,
-                        'watched_seconds' => $progressMap->has($lesson->id) ? $progressMap[$lesson->id]->watched_seconds : 0,
+                        'watched_seconds' => $progressMap[$lesson->id]->watched_seconds ?? 0,
                     ]),
                 ];
             });

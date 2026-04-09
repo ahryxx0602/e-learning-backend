@@ -7,7 +7,6 @@ use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Modules\Course\Models\Course;
-use Modules\Lessons\Models\Lesson;
 use Modules\Lessons\Models\Section;
 use Modules\Lessons\Http\Requests\StoreSectionRequest;
 use Modules\Lessons\Http\Requests\UpdateSectionRequest;
@@ -93,10 +92,6 @@ class SectionController extends Controller
     public function destroy(int $id): JsonResponse
     {
         $this->repository->findOrFail($id);
-
-        // Bỏ gán section cho các bài giảng trước khi xóa chương
-        Lesson::where('section_id', $id)->update(['section_id' => null]);
-
         $this->repository->delete($id);
 
         return $this->success(null, 'Xóa chương thành công.');
