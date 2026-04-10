@@ -115,6 +115,8 @@ php artisan storage:link
 **8. Khởi chạy ứng dụng**
 ```bash
 php artisan serve
+# Mở một terminal mới và chạy lệnh sau để xử lý queue (mail, AI, v.v.):
+php artisan queue:work
 ```
 
 Truy cập: `http://localhost:8000`
@@ -131,14 +133,17 @@ e-learning-backend/
 │   └── Providers/                  # AppServiceProvider
 │
 ├── Modules/                        # Feature modules (Nwidart Laravel Modules)
-│   └── User/                       # Module quản lý người dùng
+│   └── Auth/                       # Ví dụ Module Auth (Xác thực, Email)
 │   │   ├── app/
+│   │   │   ├── Events/             # Event classes (vd: UserRegistered)
+│   │   │   ├── Listeners/          # Event Listeners (vd: SendWelcomeEmail)
+│   │   │   ├── Notifications/      # Email/Database Notifications
 │   │   │   ├── Http/Controllers/   # Controllers của module
 │   │   │   └── Providers/          # Service providers
 │   │   ├── config/                 # Cấu hình module
 │   │   ├── database/
 │   │   │   ├── migrations/
-│   │   │   └── seeders/            # RoleAndAdminSeeder, UserDatabaseSeeder
+│   │   │   └── seeders/            # RoleAndAdminSeeder...
 │   │   ├── resources/
 │   │   │   ├── assets/             # JS, SCSS
 │   │   │   └── views/              # Blade templates
@@ -173,8 +178,8 @@ e-learning-backend/
 ├── public/                         # Entry point (index.php)
 ├── storage/                        # Logs, cache, uploads
 ├── tests/
-│   ├── Feature/
-│   └── Unit/
+│   ├── Feature/                    # Kiểm thử tính năng (API, tích hợp)
+│   └── Unit/                       # Kiểm thử đơn vị (logic nhỏ, helper)
 │
 ├── modules_statuses.json           # Trạng thái các module
 ├── composer.json
