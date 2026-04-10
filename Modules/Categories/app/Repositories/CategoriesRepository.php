@@ -120,6 +120,9 @@ class CategoriesRepository extends BaseRepository implements CategoriesRepositor
     /**
      * {@inheritDoc}
      */
+    /**
+     * {@inheritDoc}
+     */
     public function toggleStatus(int $id): Model
     {
         $category = $this->model->newQuery()->findOrFail($id);
@@ -127,5 +130,41 @@ class CategoriesRepository extends BaseRepository implements CategoriesRepositor
         $category->refresh();
 
         return $category;
+    }
+
+    /**
+     * {@inheritDoc}
+     * Hỗ trợ tìm kiếm theo name hoặc slug.
+     */
+    public function paginate(int $perPage = 15, array $columns = ['*'], array $relations = []): \Illuminate\Contracts\Pagination\LengthAwarePaginator
+    {
+        $perPage = max(1, min($perPage, static::MAX_PER_PAGE));
+        $search = request()->query('search');
+
+        $query = $this->model->newQuery()->with($relations);
+
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('slug', 'like', "%{$search}%");
+            });
+        }
+
+        return $query->paginate($perPage, $columns);
+    }
+
+    /**
+     * {@inheritDoc}
+     * Không cho phép xóa danh mục nếu đang có danh mục con.
+     */
+    public function delete(int $id): bool
+    {
+        $category = $this->model->newQuery()->withCount('children')->findOrFail($id);
+
+        if ($category->children_count > 0) {
+            throw new \RuntimeException('Không thể xóa danh mục đang có danh mục con.');
+        }
+
+        return (bool) $category->delete();
     }
 }

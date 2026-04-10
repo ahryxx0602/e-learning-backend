@@ -99,7 +99,11 @@ class CategoriesController extends Controller
      */
     public function destroy(int $id): JsonResponse
     {
-        $this->repository->delete($id);
+        try {
+            $this->repository->delete($id);
+        } catch (\RuntimeException $e) {
+            return $this->error($e->getMessage(), 400);
+        }
 
         return $this->success(null, 'Danh mục đã được xoá thành công.');
     }
