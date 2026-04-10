@@ -98,6 +98,10 @@ class CourseController extends Controller
         $categoryIds = $validated['category_ids'] ?? null;
         unset($validated['category_ids']);
 
+        // Fetch old course to retrieve old thumbnail for cleanup
+        $oldCourse = $this->repository->findOrFail($id);
+        $oldThumbnail = $oldCourse->thumbnail;
+
         $course = DB::transaction(function () use ($id, $validated, $categoryIds) {
             $course = $this->repository->update($id, $validated);
 
@@ -108,6 +112,11 @@ class CourseController extends Controller
 
             return $course;
         });
+
+        // Cleanup old thumbnail file if it was explicitly modified or removed
+        if (array_key_exists('thumbnail', $validated) && $validated['thumbnail'] !== $oldThumbnail) {
+            $this->deleteThumbnailFile($oldThumbnail);
+        }
 
         $course->load(['teacher', 'categories']);
 
