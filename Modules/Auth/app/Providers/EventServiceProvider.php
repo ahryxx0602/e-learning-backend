@@ -3,6 +3,8 @@
 namespace Modules\Auth\Providers;
 
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
+use Modules\Auth\Events\StudentRegistered;
+use Modules\Auth\Listeners\SendVerificationEmail;
 
 class EventServiceProvider extends ServiceProvider
 {
@@ -11,14 +13,19 @@ class EventServiceProvider extends ServiceProvider
      *
      * @var array<string, array<int, string>>
      */
-    protected $listen = [];
+    protected $listen = [
+        StudentRegistered::class => [
+            SendVerificationEmail::class,
+        ],
+    ];
 
     /**
-     * Indicates if events should be discovered.
+     * Indicates if events should be discovered automatically.
+     * Tắt auto-discovery để dùng explicit mapping ở trên — rõ ràng hơn cho đồ án.
      *
      * @var bool
      */
-    protected static $shouldDiscoverEvents = true;
+    protected static $shouldDiscoverEvents = false;
 
     /**
      * Configure the proper event listeners for email verification.

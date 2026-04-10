@@ -4,6 +4,7 @@ namespace Modules\Payment\Services;
 
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
+use Modules\Payment\Events\OrderPlaced;
 use Modules\Payment\Models\Order;
 use Modules\Payment\Models\Transaction;
 
@@ -213,6 +214,10 @@ class VnpayService
 
             // Enroll student — tạo records trong students_course
             $this->enrollStudent($order);
+
+            // Dispatch event — Listener SendOrderConfirmationEmail chạy async qua queue
+            // Không dùng Mail::send trực tiếp vì IPN callback cần phản hồi VNPAY trong vài giây
+            OrderPlaced::dispatch($order);
 
             Log::channel('vnpay')->info('IPN payment SUCCESS', ['order_code' => $orderCode]);
         } else {

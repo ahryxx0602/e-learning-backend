@@ -16,6 +16,7 @@ class PaymentServiceProvider extends ServiceProvider
     {
         $this->loadMigrationsFrom(module_path($this->name, 'database/migrations'));
         $this->mergeConfigFrom(module_path($this->name, 'config/vnpay.php'), 'vnpay');
+        $this->loadViewsFrom(module_path($this->name, 'resources/views'), $this->nameLower);
     }
 
     /**
@@ -29,6 +30,7 @@ class PaymentServiceProvider extends ServiceProvider
             \Modules\Payment\Repositories\OrderRepository::class
         );
 
+        $this->app->register(EventServiceProvider::class);
         $this->app->register(RouteServiceProvider::class);
     }
 }

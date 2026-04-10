@@ -8,9 +8,9 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
+use Modules\Auth\Events\StudentRegistered;
 use Modules\Auth\Http\Requests\Student\ForgotPasswordRequest;
 use Modules\Auth\Http\Requests\Student\LoginRequest;
 use Modules\Auth\Http\Requests\Student\RegisterRequest;
@@ -45,7 +45,7 @@ class AuthController extends Controller
     {
         $data = $request->validated();
 
-        $verifyToken = null;
+        $verifyToken = '';
 
         // Wrap trong transaction để đảm bảo atomicity
         $student = DB::transaction(function () use ($data, &$verifyToken) {
@@ -68,20 +68,8 @@ class AuthController extends Controller
             return $student;
         });
 
-        // Gửi email xác thực (fire & forget — nếu mail chưa cấu hình sẽ log lỗi nhưng không crash)
-        try {
-            $verifyUrl = config('app.url') . '/api/v1/auth/verify-email/' . $verifyToken;
-
-            Mail::send('auth::emails.verify-email', [
-                'studentName' => $student->name,
-                'verifyUrl'   => $verifyUrl,
-            ], function ($message) use ($student) {
-                $message->to($student->email)
-                    ->subject('Xác thực email — E-Learning');
-            });
-        } catch (\Exception) {
-            // Không block đăng ký nếu mail lỗi
-        }
+        // Dispatch event — Listener SendVerificationEmail chạy async qua queue
+        StudentRegistered::dispatch($student, $verifyToken);
 
         $token = $student->createToken('student-token')->plainTextToken;
 
@@ -167,35 +155,38 @@ class AuthController extends Controller
      *
      * GET /api/v1/auth/verify-email/{token}
      */
-    public function verifyEmail(string $token): JsonResponse
+    public function verifyEmail(string $token): \Illuminate\Http\RedirectResponse
     {
+        $frontendUrl = config('app.frontend_url', 'http://localhost:5173');
+        $resultUrl   = $frontendUrl . '/verify-email/result';
+
         $record = DB::table('student_email_verifications')
             ->where('token', $token)
             ->first();
 
         if (!$record) {
-            return $this->error('Token xác thực không hợp lệ.', 400);
+            return redirect($resultUrl . '?status=invalid');
         }
 
         if (now()->isAfter($record->expires_at)) {
             DB::table('student_email_verifications')->where('token', $token)->delete();
-            return $this->error('Token xác thực đã hết hạn. Vui lòng đăng ký lại.', 400);
+            return redirect($resultUrl . '?status=expired');
         }
 
         $student = Student::where('email', $record->email)->first();
 
         if (!$student) {
-            return $this->error('Tài khoản không tồn tại.', 404);
+            return redirect($resultUrl . '?status=invalid');
         }
 
         if ($student->email_verified_at) {
-            return $this->error('Email đã được xác thực trước đó.', 400);
+            return redirect($resultUrl . '?status=already');
         }
 
         $student->update(['email_verified_at' => now()]);
         DB::table('student_email_verifications')->where('token', $token)->delete();
 
-        return $this->success(null, 'Xác thực email thành công.');
+        return redirect($resultUrl . '?status=success');
     }
 
     /**
@@ -215,10 +206,11 @@ class AuthController extends Controller
         }
 
         // Xoá token cũ (nếu có) và tạo token mới
-        DB::transaction(function () use ($email, &$verifyToken) {
+        $verifyToken = bin2hex(random_bytes(32));
+
+        DB::transaction(function () use ($email, $verifyToken) {
             DB::table('student_email_verifications')->where('email', $email)->delete();
 
-            $verifyToken = bin2hex(random_bytes(32));
             DB::table('student_email_verifications')->insert([
                 'email'      => $email,
                 'token'      => $verifyToken,
@@ -228,20 +220,8 @@ class AuthController extends Controller
             ]);
         });
 
-        // Gửi email xác thực
-        try {
-            $verifyUrl = config('app.url') . '/api/v1/auth/verify-email/' . $verifyToken;
-
-            Mail::send('auth::emails.verify-email', [
-                'studentName' => $student->name,
-                'verifyUrl'   => $verifyUrl,
-            ], function ($message) use ($student) {
-                $message->to($student->email)
-                    ->subject('Xác thực email — E-Learning');
-            });
-        } catch (\Exception) {
-            return $this->error('Không thể gửi email. Vui lòng thử lại sau.', 500);
-        }
+        // Dispatch event — tái sử dụng cùng Listener, chạy async qua queue
+        StudentRegistered::dispatch($student, $verifyToken);
 
         return $this->success(null, 'Email xác thực đã được gửi lại. Vui lòng kiểm tra hộp thư.');
     }
