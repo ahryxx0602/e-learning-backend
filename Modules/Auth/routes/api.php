@@ -54,7 +54,8 @@ Route::prefix('auth')->group(function () {
     Route::post('resend-verification', [StudentAuthController::class, 'resendVerification'])
         ->middleware('throttle:3,1');
 
-    Route::post('reset-password', [StudentAuthController::class, 'resetPassword']);
+    Route::post('reset-password', [StudentAuthController::class, 'resetPassword'])
+        ->middleware('throttle:3,1');
 
     // Protected
     Route::middleware('auth:api')->group(function () {
