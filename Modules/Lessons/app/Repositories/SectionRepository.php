@@ -47,4 +47,25 @@ class SectionRepository extends BaseRepository implements SectionRepositoryInter
             }
         });
     }
+
+    /**
+     * {@inheritDoc}
+     * Xóa chương nhưng giữ lại các bài giảng (chuyển về Chưa phân chương).
+     */
+    public function delete(int $id): bool
+    {
+        $section = $this->model->newQuery()->findOrFail($id);
+
+        DB::transaction(function () use ($section) {
+            // Gỡ bỏ liên kết bài giảng khỏi chương này
+            DB::table('lessons')
+                ->where('section_id', $section->id)
+                ->whereNull('deleted_at')
+                ->update(['section_id' => null]);
+
+            $section->delete();
+        });
+
+        return true;
+    }
 }
