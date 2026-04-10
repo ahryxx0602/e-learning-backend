@@ -13,6 +13,7 @@ use Modules\Course\Http\Requests\UpdateCourseRequest;
 use Modules\Course\Http\Requests\BulkDeleteCourseRequest;
 use Modules\Course\Http\Requests\BulkRestoreCourseRequest;
 use Modules\Course\Http\Requests\BulkForceDeleteCourseRequest;
+use Modules\Course\Http\Requests\BulkStatusCourseRequest;
 use Modules\Course\Http\Resources\CourseResource;
 use Modules\Course\Models\Course;
 use Modules\Course\Repositories\CourseRepositoryInterface;
@@ -143,6 +144,19 @@ class CourseController extends Controller
         $statusText = $course->status === 1 ? 'xuất bản' : 'chuyển về nháp';
 
         return $this->success(new CourseResource($course), "Khóa học đã được {$statusText}.");
+    }
+
+    /**
+     * Cập nhật trạng thái cho nhiều Courses.
+     */
+    public function bulkStatus(BulkStatusCourseRequest $request): JsonResponse
+    {
+        $count = $this->repository->actionMany($request->ids, $request->status === 1 ? 'publish' : 'unpublish');
+
+        return $this->success(
+            ['updated_count' => $count, 'updated_ids' => $request->ids],
+            "Đã cập nhật {$count} khóa học thành công."
+        );
     }
 
     // ── Soft Delete Operations ──

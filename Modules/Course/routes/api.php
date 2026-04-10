@@ -16,6 +16,7 @@ Route::middleware(['auth:admin'])->prefix('admin')->group(function () {
     Route::post('courses/bulk-restore',         [CourseController::class, 'bulkRestore']);
     Route::delete('courses/bulk-delete',        [CourseController::class, 'bulkDelete']);
     Route::delete('courses/bulk-force-delete',  [CourseController::class, 'bulkForceDelete']);
+    Route::patch('courses/bulk-status',         [CourseController::class, 'bulkStatus']);
 
     // Standard CRUD
     Route::apiResource('courses', CourseController::class)->names('admin.courses');
