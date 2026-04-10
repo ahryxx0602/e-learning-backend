@@ -67,8 +67,11 @@ class AuthController extends Controller
      */
     public function logout(Request $request): JsonResponse
     {
-        // Xoá token hiện tại đang sử dụng
-        $request->user()->currentAccessToken()->delete();
+        // Xoá token hiện tại đang sử dụng (nếu có - linh hoạt cho cả Web/Test)
+        $token = $request->user()->currentAccessToken();
+        if ($token) {
+            $token->delete();
+        }
 
         return $this->success(null, 'Đăng xuất thành công.');
     }
