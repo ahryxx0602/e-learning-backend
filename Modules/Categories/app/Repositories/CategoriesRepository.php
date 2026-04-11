@@ -141,16 +141,49 @@ class CategoriesRepository extends BaseRepository implements CategoriesRepositor
         $perPage = max(1, min($perPage, static::MAX_PER_PAGE));
         $search = request()->query('search');
 
-        $query = $this->model->newQuery()->with($relations);
-
+        // Nếu có search, ưu tiên phân trang phẳng để tìm đúng kết quả
         if ($search) {
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                    ->orWhere('slug', 'like', "%{$search}%");
-            });
+            return $this->model->newQuery()
+                ->with($relations)
+                ->where(function ($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%")
+                        ->orWhere('slug', 'like', "%{$search}%");
+                })
+                ->paginate($perPage, $columns);
         }
 
-        return $query->paginate($perPage, $columns);
+        // Nếu không search, phân trang theo Danh mục gốc (Roots)
+        // Điều này đảm bảo cây danh mục không bị gãy giữa các trang
+        $paginator = $this->model->newQuery()
+            ->whereIsRoot()
+            ->defaultOrder()
+            ->paginate($perPage, ['*']); // Cần lấy _lft/_rgt để truy vấn con cháu
+
+        $roots = $paginator->getCollection();
+
+        if ($roots->isEmpty()) {
+            return $paginator;
+        }
+
+        // Lấy toàn bộ cây (gốc + con cháu) của các gốc đã phân trang
+        // Dùng lft/rgt range: con cháu của root có _lft >= root._lft và _rgt <= root._rgt
+        $ranges = $roots->map(fn ($r) => ['lft' => $r->_lft, 'rgt' => $r->_rgt]);
+
+        $items = $this->model->newQuery()
+            ->with($relations)
+            ->withDepth()
+            ->defaultOrder()
+            ->where(function ($q) use ($ranges) {
+                foreach ($ranges as $range) {
+                    $q->orWhere(function ($sub) use ($range) {
+                        $sub->where('_lft', '>=', $range['lft'])
+                            ->where('_rgt', '<=', $range['rgt']);
+                    });
+                }
+            })
+            ->get();
+
+        return $paginator->setCollection($items);
     }
 
     /**
