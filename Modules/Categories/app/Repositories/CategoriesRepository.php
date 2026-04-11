@@ -3,6 +3,7 @@
 namespace Modules\Categories\Repositories;
 
 use App\Repositories\BaseRepository;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Modules\Categories\Models\Category;
@@ -82,8 +83,7 @@ class CategoriesRepository extends BaseRepository implements CategoriesRepositor
         if ($parentId === null) {
             // Đưa lên root
             $category->saveAsRoot();
-        }
-        else {
+        } else {
             // Di chuyển vào chính nó
             if ($parentId === $id) {
                 throw new \InvalidArgumentException('Không thể di chuyển danh mục vào chính nó.');
@@ -136,7 +136,7 @@ class CategoriesRepository extends BaseRepository implements CategoriesRepositor
      * {@inheritDoc}
      * Hỗ trợ tìm kiếm theo name hoặc slug.
      */
-    public function paginate(int $perPage = 15, array $columns = ['*'], array $relations = []): \Illuminate\Contracts\Pagination\LengthAwarePaginator
+    public function paginate(int $perPage = 15, array $columns = ['*'], array $relations = []): LengthAwarePaginator
     {
         $perPage = max(1, min($perPage, static::MAX_PER_PAGE));
         $search = request()->query('search');
@@ -146,7 +146,7 @@ class CategoriesRepository extends BaseRepository implements CategoriesRepositor
         if ($search) {
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('slug', 'like', "%{$search}%");
+                    ->orWhere('slug', 'like', "%{$search}%");
             });
         }
 
@@ -166,5 +166,44 @@ class CategoriesRepository extends BaseRepository implements CategoriesRepositor
         }
 
         return (bool) $category->delete();
+    }
+
+    /**
+     * {@inheritDoc}
+     * Kiểm tra danh mục cha trước khi khôi phục.
+     */
+    public function restore(int $id): bool
+    {
+        $category = $this->model->newQuery()->onlyTrashed()->findOrFail($id);
+
+        if ($category->parent_id !== null) {
+            // Kiểm tra cha có đang active không (không bị xóa tạm/vĩnh viễn)
+            $parentExists = $this->model->newQuery()->withoutTrashed()->find($category->parent_id);
+            if (! $parentExists) {
+                throw new \RuntimeException('Vui lòng khôi phục danh mục cha trước.');
+            }
+        }
+
+        return (bool) $category->restore();
+    }
+
+    /**
+     * {@inheritDoc}
+     * Khôi phục nhiều bản ghi, áp dụng validation từng item.
+     */
+    public function restoreMany(array $ids): int
+    {
+        $count = 0;
+        foreach ($ids as $id) {
+            try {
+                if ($this->restore($id)) {
+                    $count++;
+                }
+            } catch (\RuntimeException) {
+                // Skip items that fail validation (e.g. parent still deleted)
+            }
+        }
+
+        return $count;
     }
 }

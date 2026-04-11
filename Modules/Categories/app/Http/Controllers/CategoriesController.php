@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Modules\Categories\Http\Requests\BulkDeleteCategoriesRequest;
 use Modules\Categories\Http\Requests\BulkForceDeleteCategoriesRequest;
 use Modules\Categories\Http\Requests\BulkRestoreCategoriesRequest;
@@ -175,7 +176,11 @@ class CategoriesController extends Controller
      */
     public function restore(int $id): JsonResponse
     {
-        $this->repository->restore($id);
+        try {
+            $this->repository->restore($id);
+        } catch (\RuntimeException $e) {
+            return $this->error($e->getMessage(), 400);
+        }
 
         return $this->success(null, 'Danh mục đã được khôi phục thành công.');
     }
@@ -239,7 +244,7 @@ class CategoriesController extends Controller
     public function publicIndex(): JsonResponse
     {
         // Lấy danh sách category_id đang có course published
-        $hasCourseIds = \Illuminate\Support\Facades\DB::table('categories_courses')
+        $hasCourseIds = DB::table('categories_courses')
             ->join('courses', 'courses.id', '=', 'categories_courses.course_id')
             ->where('courses.status', 1)
             ->whereNull('courses.deleted_at')
@@ -254,19 +259,19 @@ class CategoriesController extends Controller
         foreach ($categories as $cat) {
             $hasCourse = false;
             foreach ($hasCourseIds as $cId) {
-                 $child = $categories->firstWhere('id', $cId);
-                 // Nếu child có tồn tại và nằm trong (chính là, hoặc là con cháu của) node hiện tại
-                 if ($child && $child->_lft >= $cat->_lft && $child->_rgt <= $cat->_rgt) {
-                     $hasCourse = true;
-                     break;
-                 }
+                $child = $categories->firstWhere('id', $cId);
+                // Nếu child có tồn tại và nằm trong (chính là, hoặc là con cháu của) node hiện tại
+                if ($child && $child->_lft >= $cat->_lft && $child->_rgt <= $cat->_rgt) {
+                    $hasCourse = true;
+                    break;
+                }
             }
             if ($hasCourse) {
                 $validIds[] = $cat->id;
             }
         }
 
-        $filteredCategories = $categories->filter(fn($c) => in_array($c->id, $validIds))->values();
+        $filteredCategories = $categories->filter(fn ($c) => in_array($c->id, $validIds))->values();
 
         return $this->success(CategoryResource::collection($filteredCategories));
     }
@@ -288,7 +293,7 @@ class CategoriesController extends Controller
     {
         $category = $this->repository->findBySlug($slug, true);
 
-        if (!$category) {
+        if (! $category) {
             return $this->error('Danh mục không tồn tại.', 404);
         }
 
